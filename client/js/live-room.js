@@ -2,12 +2,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
 (() => {
   const TRANSLATIONS = {
-// ... باقي الكود
-(() => {
-  const TRANSLATIONS = {
     en: {
       common: {
         openMenu: 'Open menu',
+// ... كمل باقي الكود عادي
         languageToggleLabel: 'Switch language'
       },
       roles: {
