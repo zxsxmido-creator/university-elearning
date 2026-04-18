@@ -206,328 +206,9 @@
     }
   };
 
-  const BASE_QUIZZES = [
-    {
-      id: 'quiz-trees',
-      courseCode: 'CS301',
-      course: { en: 'Data Structures and Algorithms', ar: 'هياكل البيانات والخوارزميات' },
-      title: { en: 'Trees Mastery Check', ar: 'اختبار إتقان الأشجار' },
-      description: {
-        en: 'A focused check on binary trees, traversals, and balancing concepts.',
-        ar: 'اختبار مركز على الأشجار الثنائية وطرق المرور ومفاهيم الموازنة.'
-      },
-      due: { en: 'Today, 7:00 PM', ar: 'اليوم، 7:00 مساء' },
-      duration: 20,
-      points: 100,
-      status: 'pending',
-      questions: [
-        {
-          prompt: {
-            en: 'Which traversal visits the root node before its subtrees?',
-            ar: 'أي نوع من المرور يزور العقدة الجذرية قبل الفروع التابعة؟'
-          },
-          options: [
-            { en: 'In-order traversal', ar: 'المرور داخل الترتيب' },
-            { en: 'Pre-order traversal', ar: 'المرور السابق للترتيب' },
-            { en: 'Post-order traversal', ar: 'المرور اللاحق للترتيب' },
-            { en: 'Level-order traversal', ar: 'المرور بالمستويات' }
-          ],
-          answer: 1
-        },
-        {
-          prompt: {
-            en: 'What is the worst-case height of an unbalanced binary search tree with n nodes?',
-            ar: 'ما أسوأ ارتفاع لشجرة بحث ثنائية غير متوازنة تحتوي على n عقد؟'
-          },
-          options: [
-            { en: 'log n', ar: 'لوغاريتم n' },
-            { en: 'Square root of n', ar: 'الجذر التربيعي لـ n' },
-            { en: 'n', ar: 'n' },
-            { en: 'Constant', ar: 'ثابت' }
-          ],
-          answer: 2
-        },
-        {
-          prompt: {
-            en: 'AVL rotations are primarily used to improve which property?',
-            ar: 'تُستخدم دورانات AVL أساسا لتحسين أي خاصية؟'
-          },
-          options: [
-            { en: 'Node coloring', ar: 'تلوين العقد' },
-            { en: 'Height balance', ar: 'توازن الارتفاع' },
-            { en: 'Hash collisions', ar: 'تصادمات التجزئة' },
-            { en: 'Disk compression', ar: 'ضغط القرص' }
-          ],
-          answer: 1
-        }
-      ]
-    },
-    {
-      id: 'quiz-linear-algebra',
-      courseCode: 'MATH201',
-      course: { en: 'Linear Algebra', ar: 'الجبر الخطي' },
-      title: { en: 'Eigenvalues Sprint Quiz', ar: 'اختبار سريع للقيم الذاتية' },
-      description: {
-        en: 'Review eigenvalues, eigenvectors, and diagonalization in a short timed quiz.',
-        ar: 'راجع القيم الذاتية والمتجهات الذاتية والقطرية في اختبار قصير بزمن محدد.'
-      },
-      due: { en: 'Tomorrow, 10:30 AM', ar: 'غدا، 10:30 صباحا' },
-      duration: 15,
-      points: 80,
-      status: 'pending',
-      questions: [
-        {
-          prompt: {
-            en: 'A non-zero vector v is an eigenvector of matrix A when:',
-            ar: 'يكون المتجه غير الصفري v متجها ذاتيا للمصفوفة A عندما:'
-          },
-          options: [
-            { en: 'Av = 0', ar: 'Av = 0' },
-            { en: 'Av = lambda v', ar: 'Av = lambda v' },
-            { en: 'A + v = 0', ar: 'A + v = 0' },
-            { en: 'det(A) = v', ar: 'det(A) = v' }
-          ],
-          answer: 1
-        },
-        {
-          prompt: {
-            en: 'Diagonalization is most useful when a matrix has:',
-            ar: 'يكون القطرية أكثر فائدة عندما تمتلك المصفوفة:'
-          },
-          options: [
-            { en: 'Enough linearly independent eigenvectors', ar: 'عددا كافيا من المتجهات الذاتية المستقلة خطيا' },
-            { en: 'Only zero entries', ar: 'قيما صفرية فقط' },
-            { en: 'No determinant', ar: 'بلا محدد' },
-            { en: 'A single row', ar: 'صفا واحدا' }
-          ],
-          answer: 0
-        },
-        {
-          prompt: {
-            en: 'The characteristic polynomial is used to find:',
-            ar: 'يُستخدم كثير الحدود المميز لإيجاد:'
-          },
-          options: [
-            { en: 'Matrix rank', ar: 'رتبة المصفوفة' },
-            { en: 'Inverse directly', ar: 'المعكوس مباشرة' },
-            { en: 'Eigenvalues', ar: 'القيم الذاتية' },
-            { en: 'Trace only', ar: 'الأثر فقط' }
-          ],
-          answer: 2
-        }
-      ]
-    },
-    {
-      id: 'quiz-indexing',
-      courseCode: 'DB401',
-      course: { en: 'Database Systems', ar: 'أنظمة قواعد البيانات' },
-      title: { en: 'Indexing and Query Plans', ar: 'الفهرسة وخطط الاستعلام' },
-      description: {
-        en: 'Assess how indexes influence search paths, joins, and execution plans.',
-        ar: 'اختبر تأثير الفهارس على مسارات البحث والربط وخطط التنفيذ.'
-      },
-      due: { en: 'Friday, 2:00 PM', ar: 'الجمعة، 2:00 مساء' },
-      duration: 25,
-      points: 120,
-      status: 'pending',
-      questions: [
-        {
-          prompt: {
-            en: 'A B-tree index mainly improves performance for:',
-            ar: 'يحسن فهرس B-tree الأداء أساسا في:'
-          },
-          options: [
-            { en: 'Sequential full scans only', ar: 'المسح الكامل المتسلسل فقط' },
-            { en: 'Sorted lookups and range queries', ar: 'عمليات البحث المرتبة واستعلامات النطاق' },
-            { en: 'Image rendering', ar: 'عرض الصور' },
-            { en: 'CSS layout', ar: 'تنسيق CSS' }
-          ],
-          answer: 1
-        },
-        {
-          prompt: {
-            en: 'An execution plan explains:',
-            ar: 'توضح خطة التنفيذ:'
-          },
-          options: [
-            { en: 'How the DBMS intends to run the query', ar: 'كيف ينوي نظام إدارة قاعدة البيانات تنفيذ الاستعلام' },
-            { en: 'Only the query author', ar: 'كاتب الاستعلام فقط' },
-            { en: 'The network cable path', ar: 'مسار كابل الشبكة' },
-            { en: 'The UI color palette', ar: 'لوحة ألوان الواجهة' }
-          ],
-          answer: 0
-        },
-        {
-          prompt: {
-            en: 'A covering index can reduce:',
-            ar: 'يمكن أن يقلل الفهرس الشامل من:'
-          },
-          options: [
-            { en: 'Disk lookups to the base table', ar: 'عمليات الرجوع إلى الجدول الأساسي على القرص' },
-            { en: 'The number of SQL keywords', ar: 'عدد كلمات SQL' },
-            { en: 'Browser cache usage', ar: 'استخدام ذاكرة المتصفح' },
-            { en: 'Font loading time', ar: 'وقت تحميل الخطوط' }
-          ],
-          answer: 0
-        }
-      ]
-    },
-    {
-      id: 'quiz-quantum',
-      courseCode: 'PHYS301',
-      course: { en: 'Quantum Mechanics', ar: 'ميكانيكا الكم' },
-      title: { en: 'Wave Function Review', ar: 'مراجعة الدالة الموجية' },
-      description: {
-        en: 'A recap on normalization, probability density, and operators.',
-        ar: 'مراجعة للتطبيع وكثافة الاحتمال والعوامل.'
-      },
-      due: { en: 'Apr 11', ar: '11 أبريل' },
-      duration: 18,
-      points: 90,
-      status: 'completed',
-      savedResult: {
-        score: 92,
-        completedAt: '2026-04-11T16:00:00.000Z',
-        answers: [0, 1, 0]
-      },
-      questions: [
-        {
-          prompt: {
-            en: 'Normalization of a wave function ensures:',
-            ar: 'يضمن تطبيع الدالة الموجية ما يلي:'
-          },
-          options: [
-            { en: 'Total probability equals 1', ar: 'أن يكون مجموع الاحتمال مساويا لـ 1' },
-            { en: 'Energy is always negative', ar: 'أن تكون الطاقة سالبة دائما' },
-            { en: 'Momentum is zero', ar: 'أن يكون الزخم صفرا' },
-            { en: 'Time stops', ar: 'أن يتوقف الزمن' }
-          ],
-          answer: 0
-        },
-        {
-          prompt: {
-            en: 'Probability density is represented by:',
-            ar: 'تمثل كثافة الاحتمال بواسطة:'
-          },
-          options: [
-            { en: 'psi', ar: 'psi' },
-            { en: '|psi| squared', ar: '|psi| تربيع' },
-            { en: 'Only the phase', ar: 'الطور فقط' },
-            { en: 'The Hamiltonian alone', ar: 'الهاملتوني فقط' }
-          ],
-          answer: 1
-        },
-        {
-          prompt: {
-            en: 'Operators in quantum mechanics are used to:',
-            ar: 'تستخدم العوامل في ميكانيكا الكم من أجل:'
-          },
-          options: [
-            { en: 'Represent observables', ar: 'تمثيل الكميات القابلة للرصد' },
-            { en: 'Design logos', ar: 'تصميم الشعارات' },
-            { en: 'Compile JavaScript', ar: 'ترجمة JavaScript' },
-            { en: 'Delete data', ar: 'حذف البيانات' }
-          ],
-          answer: 0
-        }
-      ]
-    },
-    {
-      id: 'quiz-networks',
-      courseCode: 'NET301',
-      course: { en: 'Computer Networks', ar: 'شبكات الحاسب' },
-      title: { en: 'TCP/IP Concepts Check', ar: 'اختبار مفاهيم TCP/IP' },
-      description: {
-        en: 'A quick review of layers, packets, routing, and reliability.',
-        ar: 'مراجعة سريعة للطبقات والحزم والتوجيه والموثوقية.'
-      },
-      due: { en: 'Apr 09', ar: '09 أبريل' },
-      duration: 12,
-      points: 70,
-      status: 'completed',
-      savedResult: {
-        score: 84,
-        completedAt: '2026-04-09T11:30:00.000Z',
-        answers: [1, 2, 0]
-      },
-      questions: [
-        {
-          prompt: {
-            en: 'Which layer is responsible for routing packets across networks?',
-            ar: 'أي طبقة مسؤولة عن توجيه الحزم عبر الشبكات؟'
-          },
-          options: [
-            { en: 'Application layer', ar: 'طبقة التطبيق' },
-            { en: 'Network layer', ar: 'طبقة الشبكة' },
-            { en: 'Physical layer', ar: 'الطبقة الفيزيائية' },
-            { en: 'Session layer', ar: 'طبقة الجلسة' }
-          ],
-          answer: 1
-        },
-        {
-          prompt: {
-            en: 'TCP focuses on which property?',
-            ar: 'يركز TCP على أي خاصية؟'
-          },
-          options: [
-            { en: 'Unreliable delivery', ar: 'التسليم غير الموثوق' },
-            { en: 'Color rendering', ar: 'عرض الألوان' },
-            { en: 'Reliable ordered delivery', ar: 'التسليم الموثوق والمرتب' },
-            { en: 'Audio compression', ar: 'ضغط الصوت' }
-          ],
-          answer: 2
-        },
-        {
-          prompt: {
-            en: 'An IP address primarily identifies:',
-            ar: 'يحدد عنوان IP بشكل أساسي:'
-          },
-          options: [
-            { en: 'A network interface location', ar: 'موقع واجهة شبكة' },
-            { en: 'A font family', ar: 'عائلة خط' },
-            { en: 'A document title', ar: 'عنوان مستند' },
-            { en: 'A database index', ar: 'فهرس قاعدة بيانات' }
-          ],
-          answer: 0
-        }
-      ]
-    }
-  ];
-
-  const BASE_LEADERBOARD = [
-    { name: 'Noor Khaled', points: 510, completed: 8 },
-    { name: 'Mina Adel', points: 486, completed: 7 },
-    { name: 'Yara Hany', points: 458, completed: 7 },
-    { name: 'Salma Mostafa', points: 444, completed: 6 },
-    { name: 'Omar Ahmed', points: 430, completed: 6 }
-  ];
-
-  const NOTIFICATIONS = [
-    {
-      html: {
-        en: '<strong>CS301</strong> quiz opens today at 7:00 PM',
-        ar: 'يفتح اختبار <strong>CS301</strong> اليوم الساعة 7:00 مساء'
-      },
-      time: { en: '8m ago', ar: 'منذ 8 د' },
-      read: false
-    },
-    {
-      html: {
-        en: 'You moved up <strong>2 places</strong> in the leaderboard',
-        ar: 'تقدمت <strong>مركزين</strong> في لوحة المتصدرين'
-      },
-      time: { en: '40m ago', ar: 'منذ 40 د' },
-      read: false
-    },
-    {
-      html: {
-        en: 'Review material added for <strong>Indexing and Query Plans</strong>',
-        ar: 'تمت إضافة مادة مراجعة لاختبار <strong>الفهرسة وخطط الاستعلام</strong>'
-      },
-      time: { en: '2h ago', ar: 'منذ ساعتين' },
-      read: true
-    }
-  ];
+  const BASE_QUIZZES = [];
+  const BASE_LEADERBOARD = [];
+  const NOTIFICATIONS = [];
 
   const state = {
     activeTab: 'pending',
@@ -546,6 +227,7 @@
   const shell = window.UniLearnShell.init({
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Student', role: 'student' },
+    defaultLanguage: 'ar',
     logoutPath: 'login.html'
   });
 
@@ -596,7 +278,6 @@
     return BASE_QUIZZES.map((quiz) => {
       const saved = progress[quiz.id];
       if (!saved) return { ...quiz };
-
       return {
         ...quiz,
         status: 'completed',
@@ -641,7 +322,6 @@
     const scores = getQuizzes()
       .filter((quiz) => quiz.status === 'completed' && quiz.savedResult)
       .map((quiz) => quiz.savedResult.score);
-
     return scores.length ? Math.max(...scores) : null;
   }
 
@@ -810,12 +490,10 @@
         <div class="notif-text">${pick(notification.html)}</div>
         <div class="notif-timestamp">${pick(notification.time)}</div>
       `;
-
       row.addEventListener('click', () => {
         notification.read = true;
         renderNotifications();
       });
-
       dropdownNotifs.appendChild(row);
     });
 
@@ -1010,7 +688,6 @@
   quizGrid.addEventListener('click', (event) => {
     const button = event.target.closest('[data-quiz-action]');
     if (!button) return;
-
     const reviewOnly = button.dataset.quizAction === 'review';
     openQuizModal(button.dataset.quizId, reviewOnly);
   });
@@ -1036,6 +713,7 @@
   });
 
   document.getElementById('quizCloseBtn').addEventListener('click', closeQuizModal);
+
   quizModal.addEventListener('click', (event) => {
     if (event.target === quizModal) closeQuizModal();
   });

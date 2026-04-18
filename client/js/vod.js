@@ -63,19 +63,10 @@
           showNewOnly: 'Show new only'
         },
         subjects: {
-          all: 'All subjects',
-          cs: 'Computer Science',
-          math: 'Mathematics',
-          physics: 'Physics',
-          db: 'Database Systems',
-          networks: 'Computer Networks'
+          all: 'All subjects'
         },
         instructors: {
-          all: 'All instructors',
-          khalid: 'Dr. Khalid Hassan',
-          layla: 'Prof. Layla Ibrahim',
-          omar: 'Dr. Omar Farouk',
-          sara: 'Prof. Sara Nour'
+          all: 'All instructors'
         },
         countSummary: '{{total}} lectures - {{newCount}} new',
         durationAny: 'Any',
@@ -160,19 +151,10 @@
           showNewOnly: 'إظهار الجديد فقط'
         },
         subjects: {
-          all: 'كل المواد',
-          cs: 'علوم الحاسوب',
-          math: 'الرياضيات',
-          physics: 'الفيزياء',
-          db: 'أنظمة قواعد البيانات',
-          networks: 'شبكات الحاسوب'
+          all: 'كل المواد'
         },
         instructors: {
-          all: 'كل المحاضرين',
-          khalid: 'د. خالد حسن',
-          layla: 'أ. ليلى إبراهيم',
-          omar: 'د. عمر فاروق',
-          sara: 'أ. سارة نور'
+          all: 'كل المحاضرين'
         },
         countSummary: '{{total}} محاضرات - {{newCount}} جديدة',
         durationAny: 'أي مدة',
@@ -197,184 +179,14 @@
   };
 
   const SUBJECTS = [
-    { id: 'all', translationKey: 'vod.subjects.all' },
-    { id: 'cs', translationKey: 'vod.subjects.cs' },
-    { id: 'math', translationKey: 'vod.subjects.math' },
-    { id: 'physics', translationKey: 'vod.subjects.physics' },
-    { id: 'db', translationKey: 'vod.subjects.db' },
-    { id: 'networks', translationKey: 'vod.subjects.networks' }
+    { id: 'all', translationKey: 'vod.subjects.all' }
   ];
 
   const INSTRUCTORS = [
-    { id: 'all', translationKey: 'vod.instructors.all' },
-    { id: 'khalid', translationKey: 'vod.instructors.khalid' },
-    { id: 'layla', translationKey: 'vod.instructors.layla' },
-    { id: 'omar', translationKey: 'vod.instructors.omar' },
-    { id: 'sara', translationKey: 'vod.instructors.sara' }
+    { id: 'all', translationKey: 'vod.instructors.all' }
   ];
 
-  const LECTURES = [
-    {
-      id: 'trees-traversal',
-      subject: 'cs',
-      instructor: 'khalid',
-      code: 'CS301',
-      title: {
-        en: 'Binary Trees: Insertion, Deletion, and Traversal',
-        ar: 'الأشجار الثنائية: الإدراج والحذف والمرور'
-      },
-      description: {
-        en: 'A clear walkthrough of BST operations with recursive and iterative patterns.',
-        ar: 'شرح واضح لعمليات شجرة البحث الثنائية مع الأنماط التكرارية والعاودية.'
-      },
-      durationSeconds: 5534,
-      views: 3840,
-      date: '2026-04-08',
-      isNew: false,
-      watched: true,
-      progress: 100
-    },
-    {
-      id: 'avl-balance',
-      subject: 'cs',
-      instructor: 'khalid',
-      code: 'CS301',
-      title: {
-        en: 'AVL Trees and Self-Balancing Mechanisms',
-        ar: 'أشجار AVL وآليات التوازن الذاتي'
-      },
-      description: {
-        en: 'Rotations, balance factors, and when rebalancing matters most.',
-        ar: 'الدورانات وعوامل التوازن ومتى تصبح إعادة التوازن ضرورية.'
-      },
-      durationSeconds: 4720,
-      views: 2910,
-      date: '2026-04-11',
-      isNew: false,
-      watched: true,
-      progress: 64
-    },
-    {
-      id: 'graphs-bfs',
-      subject: 'cs',
-      instructor: 'khalid',
-      code: 'CS301',
-      title: {
-        en: 'Graph Theory: BFS, DFS, and Applications',
-        ar: 'نظرية الرسوم: BFS و DFS وتطبيقاتهما'
-      },
-      description: {
-        en: 'Core traversal strategies tied to real search and optimization problems.',
-        ar: 'استراتيجيات المرور الأساسية المرتبطة بمشكلات البحث والتحسين الواقعية.'
-      },
-      durationSeconds: 6300,
-      views: 1640,
-      date: '2026-04-14',
-      isNew: true,
-      watched: false,
-      progress: 0
-    },
-    {
-      id: 'linear-independence',
-      subject: 'math',
-      instructor: 'layla',
-      code: 'MATH201',
-      title: {
-        en: 'Vector Spaces and Linear Independence',
-        ar: 'الفضاءات المتجهية والاستقلال الخطي'
-      },
-      description: {
-        en: 'Foundational concepts that prepare you for matrices and transformations.',
-        ar: 'مفاهيم تأسيسية تهيئك للمصفوفات والتحويلات الخطية.'
-      },
-      durationSeconds: 3502,
-      views: 1820,
-      date: '2026-04-06',
-      isNew: false,
-      watched: true,
-      progress: 100
-    },
-    {
-      id: 'eigenvalues',
-      subject: 'math',
-      instructor: 'layla',
-      code: 'MATH201',
-      title: {
-        en: 'Eigenvalues, Eigenvectors, and Diagonalization',
-        ar: 'القيم الذاتية والمتجهات الذاتية والقطرية'
-      },
-      description: {
-        en: 'A focused lecture on spectral intuition and algebraic shortcuts.',
-        ar: 'محاضرة مركزة حول الحدس الطيفي والاختصارات الجبرية المهمة.'
-      },
-      durationSeconds: 5095,
-      views: 980,
-      date: '2026-04-15',
-      isNew: true,
-      watched: false,
-      progress: 0
-    },
-    {
-      id: 'quantum-wave',
-      subject: 'physics',
-      instructor: 'omar',
-      code: 'PHYS301',
-      title: {
-        en: 'Quantum Mechanics: Wave Functions',
-        ar: 'ميكانيكا الكم: الدوال الموجية'
-      },
-      description: {
-        en: 'An intuition-first explanation of normalization and probability density.',
-        ar: 'شرح يبدأ بالحدس للتطبيع وكثافة الاحتمال في ميكانيكا الكم.'
-      },
-      durationSeconds: 4064,
-      views: 1100,
-      date: '2026-04-13',
-      isNew: true,
-      watched: false,
-      progress: 0
-    },
-    {
-      id: 'query-plans',
-      subject: 'db',
-      instructor: 'sara',
-      code: 'DB401',
-      title: {
-        en: 'B-Tree Indexing and Query Execution Plans',
-        ar: 'فهرسة B-Tree وخطط تنفيذ الاستعلامات'
-      },
-      description: {
-        en: 'How indexes reshape read performance and help the optimizer.',
-        ar: 'كيف تعيد الفهارس تشكيل أداء القراءة وتساعد المُحسن.'
-      },
-      durationSeconds: 4470,
-      views: 1760,
-      date: '2026-04-09',
-      isNew: false,
-      watched: true,
-      progress: 100
-    },
-    {
-      id: 'tcpip-stack',
-      subject: 'networks',
-      instructor: 'khalid',
-      code: 'NET301',
-      title: {
-        en: 'TCP/IP Stack: Layers, Packets, and Protocols',
-        ar: 'مكدس TCP/IP: الطبقات والحزم والبروتوكولات'
-      },
-      description: {
-        en: 'A systems view of networking from transport to application behavior.',
-        ar: 'رؤية أنظمية للشبكات من النقل حتى سلوك طبقة التطبيق.'
-      },
-      durationSeconds: 5720,
-      views: 1340,
-      date: '2026-04-10',
-      isNew: false,
-      watched: false,
-      progress: 42
-    }
-  ];
+  const LECTURES = [];
 
   const PLAYBACK_SPEEDS = [0.75, 1, 1.25, 1.5, 2];
 
@@ -399,6 +211,7 @@
   const shell = window.UniLearnShell.init({
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Student', role: 'student' },
+    defaultLanguage: 'ar',
     logoutPath: 'login.html'
   });
 
@@ -482,10 +295,10 @@
       lecture.code,
       pick(lecture.title),
       pick(lecture.description),
-      lecture.title.en,
-      lecture.title.ar,
-      lecture.description.en,
-      lecture.description.ar,
+      lecture.title.en || '',
+      lecture.title.ar || '',
+      lecture.description.en || '',
+      lecture.description.ar || '',
       getSubjectLabel(lecture.subject),
       getInstructorLabel(lecture.instructor)
     ].join(' ').toLowerCase();
@@ -576,6 +389,11 @@
     const featuredLectures = [...LECTURES]
       .sort((left, right) => right.views - left.views)
       .slice(0, 2);
+
+    if (!featuredLectures.length) {
+      featuredStrip.innerHTML = '';
+      return;
+    }
 
     featuredStrip.innerHTML = `
       <div class="section-hd">
@@ -966,7 +784,6 @@
 
   document.addEventListener('keydown', (event) => {
     if (!playerOverlay.classList.contains('open')) return;
-
     if (event.key === 'Escape') closePlayer();
     if (event.key === ' ') {
       event.preventDefault();
