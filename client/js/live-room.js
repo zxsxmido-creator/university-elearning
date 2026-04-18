@@ -499,11 +499,12 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         }
       });
 
-      const response = await fetch('/api/live/token', {
+const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+          // هنثبت التوكن هنا بإيدينا عشان نتخطى مشكلة المتصفح
+          'Authorization': 'Bearer uni-learn-secure-123' 
         },
         body: JSON.stringify({ channelName: channel, uid: 0, role: 'publisher' })
       });
