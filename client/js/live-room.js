@@ -2,7 +2,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
 (() => {
   const TRANSLATIONS = {
-    // ... باقي الكود بتاعك زي ما هو
+// ... باقي الكود
 (() => {
   const TRANSLATIONS = {
     en: {
