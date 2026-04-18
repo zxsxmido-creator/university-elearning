@@ -176,136 +176,9 @@
     }
   };
 
-  const SCHEDULE = [
-    {
-      time: '09:00',
-      ampm: { en: 'AM', ar: 'ص' },
-      subject: { en: 'Computer Science', ar: 'علوم الحاسب' },
-      title: { en: 'Binary Trees and Balanced BSTs', ar: 'الأشجار الثنائية و BST المتوازنة' },
-      instructor: { en: 'Dr. Khalid Hassan', ar: 'د. خالد حسن' },
-      duration: { en: '90 min', ar: '90 دقيقة' },
-      students: 142,
-      status: 'live',
-      channel: 'cs-binary-trees'
-    },
-    {
-      time: '11:30',
-      ampm: { en: 'AM', ar: 'ص' },
-      subject: { en: 'Mathematics', ar: 'الرياضيات' },
-      title: { en: 'Linear Algebra - Eigenvalues', ar: 'الجبر الخطي - القيم الذاتية' },
-      instructor: { en: 'Prof. Layla Ibrahim', ar: 'أ. ليلى إبراهيم' },
-      duration: { en: '60 min', ar: '60 دقيقة' },
-      students: 98,
-      status: 'upcoming',
-      channel: 'math-linear-algebra'
-    },
-    {
-      time: '02:00',
-      ampm: { en: 'PM', ar: 'م' },
-      subject: { en: 'Physics', ar: 'الفيزياء' },
-      title: { en: 'Quantum Mechanics: Wave Functions', ar: 'ميكانيكا الكم: الدوال الموجية' },
-      instructor: { en: 'Dr. Omar Farouk', ar: 'د. عمر فاروق' },
-      duration: { en: '90 min', ar: '90 دقيقة' },
-      students: 75,
-      status: 'upcoming',
-      channel: 'physics-quantum'
-    },
-    {
-      time: '04:30',
-      ampm: { en: 'PM', ar: 'م' },
-      subject: { en: 'Database Systems', ar: 'أنظمة قواعد البيانات' },
-      title: { en: 'Indexing Strategies and Query Optimization', ar: 'استراتيجيات الفهرسة وتحسين الاستعلامات' },
-      instructor: { en: 'Prof. Sara Nour', ar: 'أ. سارة نور' },
-      duration: { en: '60 min', ar: '60 دقيقة' },
-      students: 110,
-      status: 'upcoming',
-      channel: 'db-indexing'
-    }
-  ];
-
-  const NOTIFICATIONS = [
-    {
-      html: {
-        en: '<strong>Dr. Khalid</strong> uploaded new lecture notes for Binary Trees',
-        ar: 'قام <strong>د. خالد</strong> برفع ملاحظات جديدة لمحاضرة الأشجار الثنائية'
-      },
-      time: { en: '5m ago', ar: 'منذ 5 د' },
-      read: false,
-      route: 'curriculum.html'
-    },
-    {
-      html: {
-        en: 'Assignment 3 deadline extended to <strong>Friday</strong>',
-        ar: 'تم تمديد موعد تسليم الواجب 3 حتى <strong>الجمعة</strong>'
-      },
-      time: { en: '1h ago', ar: 'منذ ساعة' },
-      read: false,
-      route: 'quizzes.html'
-    },
-    {
-      html: {
-        en: '<strong>Prof. Layla</strong> replied to your question in Linear Algebra',
-        ar: 'ردت <strong>أ. ليلى</strong> على سؤالك في الجبر الخطي'
-      },
-      time: { en: '2h ago', ar: 'منذ ساعتين' },
-      read: false,
-      route: 'curriculum.html'
-    },
-    {
-      html: {
-        en: 'You earned a <strong>certificate</strong> in Data Structures',
-        ar: 'حصلت على <strong>شهادة</strong> في هياكل البيانات'
-      },
-      time: { en: '1d ago', ar: 'منذ يوم' },
-      read: false,
-      route: 'vod.html'
-    },
-    {
-      html: {
-        en: 'New study material added to <strong>Physics</strong> curriculum',
-        ar: 'تمت إضافة مادة دراسية جديدة إلى منهج <strong>الفيزياء</strong>'
-      },
-      time: { en: '2d ago', ar: 'منذ يومين' },
-      read: true,
-      route: 'curriculum.html'
-    },
-    {
-      html: {
-        en: 'Office hours reminder: <strong>Dr. Omar</strong> tomorrow at 10:00',
-        ar: 'تذكير بالساعات المكتبية: <strong>د. عمر</strong> غدا الساعة 10:00'
-      },
-      time: { en: '2d ago', ar: 'منذ يومين' },
-      read: true,
-      route: 'live-room.html'
-    }
-  ];
-
-  const COURSES = [
-    {
-      tag: 'CS301',
-      title: { en: 'Data Structures and Algorithms', ar: 'هياكل البيانات والخوارزميات' },
-      pct: 72,
-      lectures: 18,
-      total: 25,
-      next: { en: 'Graphs and BFS', ar: 'الرسوم البيانية و BFS' }
-    },
-    {
-      tag: 'MATH201',
-      title: { en: 'Linear Algebra', ar: 'الجبر الخطي' },
-      pct: 45,
-      lectures: 9,
-      total: 20,
-      next: { en: 'Eigenvalues', ar: 'القيم الذاتية' }
-    },
-    {
-      tag: 'PHYS301',
-      title: { en: 'Quantum Mechanics', ar: 'ميكانيكا الكم' },
-      pct: 30,
-      lectures: 6,
-      total: 20,
-      next: { en: 'Wave Functions', ar: 'الدوال الموجية' }
-    }
-  ];
+  const SCHEDULE = [];
+  const NOTIFICATIONS = [];
+  const COURSES = [];
 
   const state = {
     searchQuery: '',
@@ -327,6 +200,7 @@
   const shell = window.UniLearnShell.init({
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Ahmad', role: 'student' },
+    defaultLanguage: 'ar',
     logoutPath: 'login.html'
   });
 
@@ -338,7 +212,6 @@
 
   function matchesQuery(values) {
     if (!state.searchQuery) return true;
-
     return values.some((value) => {
       if (!value) return false;
       if (typeof value === 'string') return value.toLowerCase().includes(state.searchQuery);

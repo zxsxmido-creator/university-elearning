@@ -145,190 +145,12 @@
   const shell = window.UniLearnShell.init({
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Student', role: 'student' },
+    defaultLanguage: 'ar',
     logoutPath: 'login.html'
   });
 
-  const CATEGORIES = [
-    {
-      id: 'cs',
-      name: { en: 'Computer Science', ar: 'علوم الحاسب' },
-      code: 'CS301',
-      color: '#4ab8ff',
-      dot: '#4ab8ff',
-      desc: {
-        en: 'Core algorithms, data structures, and computational theory for advanced software engineering.',
-        ar: 'خوارزميات أساسية وهياكل بيانات ونظرية حسابية متقدمة للهندسة البرمجية.'
-      },
-      materials: 34,
-      weeks: 12
-    },
-    {
-      id: 'math',
-      name: { en: 'Mathematics', ar: 'الرياضيات' },
-      code: 'MATH201',
-      color: '#00e5a0',
-      dot: '#00e5a0',
-      desc: {
-        en: 'Linear algebra, calculus, and discrete mathematics for engineering applications.',
-        ar: 'الجبر الخطي والتفاضل والرياضيات المنفصلة لتطبيقات الهندسة.'
-      },
-      materials: 28,
-      weeks: 10
-    },
-    {
-      id: 'physics',
-      name: { en: 'Physics', ar: 'الفيزياء' },
-      code: 'PHYS301',
-      color: '#f5a623',
-      dot: '#f5a623',
-      desc: {
-        en: 'Classical mechanics, electromagnetism, and quantum phenomena.',
-        ar: 'الميكانيكا الكلاسيكية والكهرومغناطيسية والظواهر الكمية.'
-      },
-      materials: 22,
-      weeks: 10
-    },
-    {
-      id: 'db',
-      name: { en: 'Database Systems', ar: 'أنظمة قواعد البيانات' },
-      code: 'DB401',
-      color: '#c084fc',
-      dot: '#c084fc',
-      desc: {
-        en: 'Relational and NoSQL databases, query optimization, and distributed systems.',
-        ar: 'قواعد البيانات العلائقية وNoSQL وتحسين الاستعلامات والأنظمة الموزعة.'
-      },
-      materials: 19,
-      weeks: 8
-    },
-    {
-      id: 'networks',
-      name: { en: 'Computer Networks', ar: 'شبكات الحاسب' },
-      code: 'NET301',
-      color: '#ff6b6b',
-      dot: '#ff6b6b',
-      desc: {
-        en: 'TCP/IP, protocols, network security, and distributed architecture.',
-        ar: 'TCP/IP والبروتوكولات وأمن الشبكات والبنية الموزعة.'
-      },
-      materials: 16,
-      weeks: 8
-    }
-  ];
-
-  const CURRICULUM = {
-    cs: [
-      {
-        week: 1, title: 'Introduction to Complexity Theory', progress: 100,
-        items: [
-          { id: 'cs-1-1', type: 'pdf', title: 'Big-O Notation & Complexity Classes', size: '2.4 MB', pages: 18, done: true },
-          { id: 'cs-1-2', type: 'slides', title: 'Week 1 Lecture Slides', size: '4.1 MB', pages: 42, done: true },
-          { id: 'cs-1-3', type: 'quiz', title: 'Complexity Quiz - Chapter 1', size: null, pages: null, done: true },
-          { id: 'cs-1-4', type: 'link', title: 'Supplementary: Coursera Big-O', size: null, pages: null, done: false }
-        ]
-      },
-      {
-        week: 2, title: 'Arrays, Linked Lists & Stacks', progress: 100,
-        items: [
-          { id: 'cs-2-1', type: 'pdf', title: 'Linear Data Structures - Theory', size: '3.1 MB', pages: 24, done: true },
-          { id: 'cs-2-2', type: 'pdf', title: 'Memory Allocation & Pointers', size: '1.8 MB', pages: 14, done: true },
-          { id: 'cs-2-3', type: 'slides', title: 'Week 2 Slides', size: '5.2 MB', pages: 55, done: true },
-          { id: 'cs-2-4', type: 'video', title: 'Lab: Implementing a Stack in C', size: '245 MB', pages: null, done: true }
-        ]
-      },
-      {
-        week: 3, title: 'Trees - Binary, AVL & Red-Black', progress: 72,
-        items: [
-          { id: 'cs-3-1', type: 'pdf', title: 'Binary Search Trees - Full Reference', size: '4.6 MB', pages: 36, done: true },
-          { id: 'cs-3-2', type: 'pdf', title: 'AVL Trees & Rotations', size: '2.9 MB', pages: 22, done: true },
-          { id: 'cs-3-3', type: 'slides', title: 'Week 3 Lecture Slides', size: '6.3 MB', pages: 68, done: false },
-          { id: 'cs-3-4', type: 'quiz', title: 'Trees Midterm Practice', size: null, pages: null, done: false },
-          { id: 'cs-3-5', type: 'link', title: 'Visualizer: BST Animations', size: null, pages: null, done: false }
-        ]
-      },
-      {
-        week: 4, title: 'Graphs & Graph Algorithms', progress: 0,
-        items: [
-          { id: 'cs-4-1', type: 'pdf', title: 'Graph Theory Fundamentals', size: '5.2 MB', pages: 40, done: false },
-          { id: 'cs-4-2', type: 'pdf', title: 'BFS, DFS & Shortest Paths', size: '3.4 MB', pages: 28, done: false },
-          { id: 'cs-4-3', type: 'slides', title: 'Week 4 Slides', size: '4.8 MB', pages: 50, done: false },
-          { id: 'cs-4-4', type: 'video', title: 'Lab: Dijkstra Implementation', size: '310 MB', pages: null, done: false }
-        ]
-      }
-    ],
-    math: [
-      {
-        week: 1, title: 'Vectors & Vector Spaces', progress: 100,
-        items: [
-          { id: 'math-1-1', type: 'pdf', title: 'Vector Spaces - Axiomatic Approach', size: '3.2 MB', pages: 26, done: true },
-          { id: 'math-1-2', type: 'slides', title: 'Week 1 Slides', size: '3.8 MB', pages: 38, done: true },
-          { id: 'math-1-3', type: 'quiz', title: 'Vectors Practice Problems', size: null, pages: null, done: true }
-        ]
-      },
-      {
-        week: 2, title: 'Matrices & Linear Transformations', progress: 60,
-        items: [
-          { id: 'math-2-1', type: 'pdf', title: 'Matrix Operations Reference', size: '2.7 MB', pages: 20, done: true },
-          { id: 'math-2-2', type: 'pdf', title: 'Linear Transformations & Kernels', size: '3.5 MB', pages: 30, done: false },
-          { id: 'math-2-3', type: 'slides', title: 'Week 2 Slides', size: '4.4 MB', pages: 46, done: false }
-        ]
-      },
-      {
-        week: 3, title: 'Eigenvalues & Eigenvectors', progress: 0,
-        items: [
-          { id: 'math-3-1', type: 'pdf', title: 'Eigenvalue Decomposition', size: '4.1 MB', pages: 32, done: false },
-          { id: 'math-3-2', type: 'slides', title: 'Week 3 Slides', size: '5.0 MB', pages: 52, done: false },
-          { id: 'math-3-3', type: 'link', title: '3Blue1Brown: Eigenvectors Visualized', size: null, pages: null, done: false }
-        ]
-      }
-    ],
-    physics: [
-      {
-        week: 1, title: 'Classical Mechanics Review', progress: 100,
-        items: [
-          { id: 'phys-1-1', type: 'pdf', title: "Newton's Laws - Advanced Treatment", size: '2.8 MB', pages: 22, done: true },
-          { id: 'phys-1-2', type: 'slides', title: 'Week 1 Slides', size: '4.2 MB', pages: 44, done: true }
-        ]
-      },
-      {
-        week: 2, title: 'Wave Functions & Probability', progress: 30,
-        items: [
-          { id: 'phys-2-1', type: 'pdf', title: 'Schrodinger Equation - Derivation', size: '5.4 MB', pages: 42, done: true },
-          { id: 'phys-2-2', type: 'pdf', title: 'Probability Densities & Normalization', size: '3.3 MB', pages: 26, done: false },
-          { id: 'phys-2-3', type: 'slides', title: 'Week 2 Slides', size: '6.1 MB', pages: 62, done: false },
-          { id: 'phys-2-4', type: 'quiz', title: 'Wave Function Problem Set', size: null, pages: null, done: false }
-        ]
-      }
-    ],
-    db: [
-      {
-        week: 1, title: 'Relational Model & SQL', progress: 100,
-        items: [
-          { id: 'db-1-1', type: 'pdf', title: 'Relational Algebra Reference', size: '3.0 MB', pages: 24, done: true },
-          { id: 'db-1-2', type: 'slides', title: 'Week 1 Slides', size: '3.6 MB', pages: 38, done: true },
-          { id: 'db-1-3', type: 'quiz', title: 'SQL Fundamentals Quiz', size: null, pages: null, done: true }
-        ]
-      },
-      {
-        week: 2, title: 'Indexing & Query Optimization', progress: 0,
-        items: [
-          { id: 'db-2-1', type: 'pdf', title: 'B-Tree Indexing Strategies', size: '4.5 MB', pages: 36, done: false },
-          { id: 'db-2-2', type: 'pdf', title: 'Query Execution Plans', size: '2.9 MB', pages: 22, done: false },
-          { id: 'db-2-3', type: 'slides', title: 'Week 2 Slides', size: '5.2 MB', pages: 54, done: false }
-        ]
-      }
-    ],
-    networks: [
-      {
-        week: 1, title: 'OSI Model & TCP/IP Stack', progress: 80,
-        items: [
-          { id: 'net-1-1', type: 'pdf', title: 'Network Layer Architecture', size: '3.8 MB', pages: 30, done: true },
-          { id: 'net-1-2', type: 'slides', title: 'Week 1 Slides', size: '4.0 MB', pages: 42, done: true },
-          { id: 'net-1-3', type: 'quiz', title: 'TCP/IP Protocol Quiz', size: null, pages: null, done: false }
-        ]
-      }
-    ]
-  };
+  const CATEGORIES = [];
+  const CURRICULUM = {};
 
   const TYPE_META = {
     pdf: { icon: 'P', cls: 'pdf' },
@@ -338,7 +160,7 @@
     link: { icon: 'L', cls: 'link' }
   };
 
-  let activeCatId = 'cs';
+  let activeCatId = 'all';
   let viewMode = 'grid';
   let searchQuery = '';
   let modalItems = [];
@@ -379,7 +201,7 @@
     allItem.innerHTML = `
       <div class="cat-dot" style="background:var(--text-muted)"></div>
       <span class="cat-name">${shell.t('curriculum.allSubjects')}</span>
-      <span class="cat-count">${CATEGORIES.reduce((total, category) => total + category.materials, 0)}</span>
+      <span class="cat-count">${CATEGORIES.reduce((total, category) => total + (category.materials || 0), 0)}</span>
     `;
     allItem.addEventListener('click', () => {
       activeCatId = 'all';
@@ -435,11 +257,11 @@
             <div class="cat-stat-label">${shell.t('curriculum.materials')}</div>
           </div>
           <div>
-            <div class="cat-stat-val">${category.weeks}</div>
+            <div class="cat-stat-val">${category.weeks || 0}</div>
             <div class="cat-stat-label">${shell.t('curriculum.weeks')}</div>
           </div>
           <div>
-            <div class="cat-stat-val">${Math.round((doneMaterials / totalMaterials) * 100) || 0}%</div>
+            <div class="cat-stat-val">${totalMaterials ? Math.round((doneMaterials / totalMaterials) * 100) : 0}%</div>
             <div class="cat-stat-label">${shell.t('curriculum.complete')}</div>
           </div>
         </div>
@@ -522,6 +344,7 @@
     let hasAny = false;
 
     categoriesToRender.forEach(({ category, weeks }) => {
+      if (!category) return;
       weeks.forEach((week, index) => {
         const filteredItems = week.items.filter((item) => {
           return !searchQuery || item.title.toLowerCase().includes(searchQuery);

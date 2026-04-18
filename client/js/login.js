@@ -14,14 +14,17 @@
     const name = input.value.trim() || 'Student';
     localStorage.setItem('userName', name);
 
-    // هنا ضفنا الذكاء الاصطناعي بتاعنا اللي بيفرق بين الدكتور والطالب 😉
+    // تثبيت اللغة العربية كافتراضية عند أول تسجيل دخول
+    if (!localStorage.getItem('userLanguage')) {
+      localStorage.setItem('userLanguage', 'ar');
+    }
+
     const lowerName = name.toLowerCase();
     
-    // لو كتبت Admin أو Dr أو دكتور، هتاخد صلاحيات الإدارة
+    // تحديد الصلاحيات بناءً على الاسم
     if (lowerName === 'admin' || lowerName.startsWith('dr') || lowerName.startsWith('دكتور')) {
       localStorage.setItem('userRole', 'admin');
     } else {
-      // أي اسم تاني هيفهم إنه طالب
       localStorage.setItem('userRole', 'student');
     }
 
