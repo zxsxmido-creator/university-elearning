@@ -5,7 +5,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     en: {
       common: {
         openMenu: 'Open menu',
-// ... كمل باقي الكود عادي
         languageToggleLabel: 'Switch language'
       },
       roles: {
@@ -39,8 +38,19 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         chatTab: 'Chat',
         peopleTab: 'People',
         handsTab: 'Hands',
+        requestsTab: 'Requests',
         messagePlaceholder: 'Send a message...',
         noRaisedHands: 'No raised hands',
+        noSpeakRequests: 'No speak requests',
+        requestToSpeak: 'Request to Speak',
+        requestSent: 'Request sent. Waiting for approval...',
+        requestApproved: 'Your request was approved. You can speak now.',
+        requestDenied: 'Your request was denied.',
+        approveBtn: 'Approve',
+        denyBtn: 'Deny',
+        forceMute: 'Mute',
+        speakRequestToast: '{{name}} requests to speak',
+        studentMicLocked: 'Mic is locked. Request to speak first.',
         dualViewTitle: 'Dual view',
         singleViewTitle: 'Single-speaker view',
         screenViewTitle: 'Screenshare layout',
@@ -100,8 +110,19 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         chatTab: 'الدردشة',
         peopleTab: 'الحضور',
         handsTab: 'الأيدي',
+        requestsTab: 'طلبات الكلام',
         messagePlaceholder: 'أرسل رسالة...',
         noRaisedHands: 'لا توجد أيادٍ مرفوعة',
+        noSpeakRequests: 'لا توجد طلبات كلام',
+        requestToSpeak: 'طلب الكلام',
+        requestSent: 'تم إرسال الطلب. بانتظار الموافقة...',
+        requestApproved: 'تمت الموافقة على طلبك. يمكنك الكلام الآن.',
+        requestDenied: 'تم رفض طلبك.',
+        approveBtn: 'موافقة',
+        denyBtn: 'رفض',
+        forceMute: 'كتم',
+        speakRequestToast: '{{name}} يطلب الكلام',
+        studentMicLocked: 'الميكروفون مقفل. اطلب الكلام أولاً.',
         dualViewTitle: 'عرض ثنائي',
         singleViewTitle: 'عرض متحدث واحد',
         screenViewTitle: 'تخطيط مشاركة الشاشة',
@@ -155,6 +176,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   const state = {
     participants: new Map(),
     raisedHands: [],
+    speakRequests: [],
+    approvedSpeakers: new Set(),
     socket: null,
     socketConnected: false,
     agoraClient: null,
@@ -162,14 +185,16 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     localVideoTrack: null,
     remoteVideoActive: false,
     screenTrack: null,
-    micOn: true,
-    camOn: true,
+    micOn: false, // Default OFF
+    camOn: false, // Default OFF
+    micApproved: false,
+    micRequested: false,
     screenSharing: false,
     handRaised: false,
     timerSeconds: 0,
     timerInterval: null,
-    viewMode: 'dual',
-    focusedSlot: 'remote'
+    viewMode: 'single-speaker', // Default Single Camera
+    focusedSlot: 'local'
   };
 
   const shell = window.UniLearnShell.init({
@@ -196,6 +221,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     handsPanel: document.getElementById('handsPanel'),
     handsEmpty: document.getElementById('handsEmpty'),
     handsCount: document.getElementById('handsCount'),
+    requestsPanel: document.getElementById('requestsPanel'),
+    requestsEmpty: document.getElementById('requestsEmpty'),
+    requestsCount: document.getElementById('requestsCount'),
+    micBtnLabel: document.querySelector('#toggleMic span'),
     notifStack: document.getElementById('notifStack'),
     viewerCount: document.getElementById('viewerCount'),
     timer: document.getElementById('sessionTimer'),
@@ -232,9 +261,34 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     });
   }
 
+  function applyRoleUI() {
+    const camBtn = document.getElementById('toggleCam');
+    const raiseHandBtn = document.getElementById('raiseHandBtn');
+
+    if (isInstructor) {
+      if (camBtn) camBtn.style.display = 'inline-flex';
+      if (raiseHandBtn) raiseHandBtn.style.display = 'none';
+      if (elements.micBtnLabel) elements.micBtnLabel.textContent = shell.t('liveRoom.mic');
+    } else {
+      if (camBtn) camBtn.style.display = 'none';
+      if (raiseHandBtn) raiseHandBtn.style.display = 'inline-flex';
+      if (elements.micBtnLabel) {
+        elements.micBtnLabel.textContent = state.micRequested
+          ? shell.t('liveRoom.requestSent').split('.')[0]
+          : shell.t('liveRoom.requestToSpeak');
+      }
+    }
+
+    const requestsTabBtn = document.querySelector('[data-tab="requests"]');
+    if (requestsTabBtn) {
+      requestsTabBtn.style.display = isInstructor ? 'inline-flex' : 'none';
+    }
+  }
+
   function updateSessionCopy() {
     elements.sessionTitle.textContent = (getSessionTitle()[shell.language] || getSessionTitle().en);
     elements.localName.textContent = userName || shell.t('liveRoom.youLabel');
+    applyRoleUI();
     syncRemoteSlot();
   }
 
@@ -254,21 +308,46 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     elements.viewerCount.textContent = String(participantList().length);
   }
 
+  function forceMuteParticipant(id, user) {
+    state.approvedSpeakers.delete(id);
+    if (state.socketConnected) {
+      state.socket.emit('instructor-signal', {
+        roomId: channel,
+        type: 'force-mute',
+        targetId: id,
+        data: { user }
+      });
+    }
+    pushNotification(`${escape(user.name)}: muted`, '');
+  }
+
   function renderParticipants() {
     elements.participantsList.innerHTML = participantList().map((participant) => {
       const participantRole = shell.t(`roles.${participant.role}`) || participant.role;
       const hasRaisedHand = state.raisedHands.some((entry) => entry.user.name === participant.name);
+      const isApproved = state.approvedSpeakers.has(participant.id);
+      const showMuteBtn = isInstructor && !participant.isLocal && isApproved;
+
       return `
-        <div class="participant-item">
+        <div class="participant-item" data-participant-id="${participant.id}">
           <div class="p-avatar ${participant.role !== 'student' ? 'instructor-avatar' : ''}">${escape(participant.name.charAt(0).toUpperCase())}</div>
           <div class="p-info">
             <div class="p-name">${escape(participant.name)}</div>
             <div class="p-role">${escape(participantRole)}</div>
           </div>
-          <div class="p-status">${hasRaisedHand ? '<span class="hand-mark">Hand</span>' : ''}</div>
+          <div class="p-status">
+            ${hasRaisedHand ? '<span class="hand-mark">Hand</span>' : ''}
+            ${showMuteBtn ? `<button class="mute-participant-btn" type="button" data-mute-id="${participant.id}" data-mute-name="${escape(participant.name)}">${shell.t('liveRoom.forceMute')}</button>` : ''}
+          </div>
         </div>
       `;
     }).join('');
+
+    elements.participantsList.querySelectorAll('[data-mute-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        forceMuteParticipant(btn.dataset.muteId, { name: btn.dataset.muteName });
+      });
+    });
   }
 
   function renderHands() {
@@ -307,6 +386,78 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       }
 
       elements.handsPanel.appendChild(row);
+    });
+  }
+
+  function approveSpeakRequest(id, user) {
+    state.speakRequests = state.speakRequests.filter((r) => r.id !== id);
+    state.approvedSpeakers.add(id);
+
+    if (state.socketConnected) {
+      state.socket.emit('instructor-signal', {
+        roomId: channel,
+        type: 'speak-approved',
+        targetId: id,
+        data: { user }
+      });
+    }
+
+    renderSpeakRequests();
+    pushNotification(`${user.name}: approved`, 'notif-user');
+  }
+
+  function denySpeakRequest(id, user) {
+    state.speakRequests = state.speakRequests.filter((r) => r.id !== id);
+
+    if (state.socketConnected) {
+      state.socket.emit('instructor-signal', {
+        roomId: channel,
+        type: 'speak-denied',
+        targetId: id,
+        data: { user }
+      });
+    }
+
+    renderSpeakRequests();
+  }
+
+  function renderSpeakRequests() {
+    if (!elements.requestsCount || !elements.requestsEmpty || !elements.requestsPanel) return;
+    
+    const count = state.speakRequests.length;
+    elements.requestsCount.textContent = String(count);
+    elements.requestsCount.classList.toggle('visible', count > 0);
+    elements.requestsEmpty.style.display = count ? 'none' : 'flex';
+
+    elements.requestsPanel.querySelectorAll('.request-item').forEach((el) => el.remove());
+
+    if (!isInstructor) return;
+
+    state.speakRequests.forEach(({ id, user }) => {
+      const row = document.createElement('div');
+      row.className = 'request-item';
+      row.dataset.requestId = id;
+      row.innerHTML = `
+        <span class="request-name">${escape(user.name)}</span>
+        <div class="request-actions">
+          <button class="approve-btn" type="button" data-approve-id="${id}">
+            ${shell.t('liveRoom.approveBtn')}
+          </button>
+          <button class="deny-btn" type="button" data-deny-id="${id}">
+            ${shell.t('liveRoom.denyBtn')}
+          </button>
+        </div>
+      `;
+
+      row.querySelector('[data-approve-id]').addEventListener('click', () => {
+        approveSpeakRequest(id, user);
+      });
+
+      row.querySelector('[data-deny-id]').addEventListener('click', () => {
+        denySpeakRequest(id, user);
+      });
+
+      elements.requestsPanel.appendChild(row);
     });
   }
 
@@ -499,12 +650,11 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         }
       });
 
-const response = await fetch('/api/live/token', {
+      const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // هنثبت التوكن هنا بإيدينا عشان نتخطى مشكلة المتصفح
-          'Authorization': 'Bearer uni-learn-secure-123' 
+          'Authorization': 'Bearer uni-learn-secure-123'
         },
         body: JSON.stringify({ channelName: channel, uid: 0, role: 'publisher' })
       });
@@ -517,7 +667,14 @@ const response = await fetch('/api/live/token', {
       state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       state.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
 
-      state.localVideoTrack.play('slot-local-media');
+      // Enforce defaults: both OFF on join
+      await state.localAudioTrack.setMuted(true);
+      await state.localVideoTrack.setMuted(true);
+
+      if (isInstructor) {
+        state.localVideoTrack.play('slot-local-media');
+      }
+
       updateLocalMediaState();
       await state.agoraClient.publish([state.localAudioTrack, state.localVideoTrack]);
     } catch (error) {
@@ -655,6 +812,45 @@ const response = await fetch('/api/live/token', {
       renderHands();
       renderParticipants();
     });
+
+    // Student receives approval
+    state.socket.on('instructor-signal', ({ type, targetId, data }) => {
+      const isMe = targetId === state.socket.id;
+
+      if (type === 'speak-approved' && isMe) {
+        state.micRequested = false;
+        state.micApproved = true;
+        pushNotification(shell.t('liveRoom.requestApproved'), 'notif-user');
+        applyRoleUI();
+      }
+
+      if (type === 'speak-denied' && isMe) {
+        state.micRequested = false;
+        state.micApproved = false;
+        pushNotification(shell.t('liveRoom.requestDenied'), '');
+        applyRoleUI();
+      }
+
+      if (type === 'force-mute' && isMe) {
+        state.micOn = false;
+        state.micApproved = false;
+        state.micRequested = false;
+        if (state.localAudioTrack) state.localAudioTrack.setMuted(true);
+        updateLocalMediaState();
+        applyRoleUI();
+        pushNotification(shell.t('liveRoom.studentMicLocked'), '');
+      }
+    });
+
+    // Admin receives speak request from student
+    state.socket.on('speak-request', ({ id, user }) => {
+      if (!isInstructor) return;
+      const already = state.speakRequests.find((r) => r.id === id);
+      if (already) return;
+      state.speakRequests.push({ id, user });
+      renderSpeakRequests();
+      pushNotification(shell.t('liveRoom.speakRequestToast', { name: user.name }), 'notif-hand');
+    });
   }
 
   async function cleanup() {
@@ -729,12 +925,46 @@ const response = await fetch('/api/live/token', {
   });
 
   elements.toggleMic.addEventListener('click', async () => {
-    state.micOn = !state.micOn;
-    if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
-    updateLocalMediaState();
+    if (isInstructor) {
+      state.micOn = !state.micOn;
+      if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
+      updateLocalMediaState();
+    } else {
+      if (state.micOn) {
+        state.micOn = false;
+        state.micApproved = false;
+        if (state.localAudioTrack) await state.localAudioTrack.setMuted(true);
+        updateLocalMediaState();
+        applyRoleUI();
+        return;
+      }
+
+      if (!state.micApproved) {
+        if (state.micRequested) {
+          pushNotification(shell.t('liveRoom.requestSent'), '');
+          return;
+        }
+        state.micRequested = true;
+        applyRoleUI();
+
+        if (state.socketConnected) {
+          state.socket.emit('speak-request', {
+            roomId: channel,
+            user: { name: userName, role: userRole }
+          });
+        }
+
+        pushNotification(shell.t('liveRoom.requestSent'), '');
+      } else {
+        state.micOn = !state.micOn;
+        if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
+        updateLocalMediaState();
+      }
+    }
   });
 
   elements.toggleCam.addEventListener('click', async () => {
+    if (!isInstructor) return;
     state.camOn = !state.camOn;
     if (state.localVideoTrack) await state.localVideoTrack.setMuted(!state.camOn);
     updateLocalMediaState();
@@ -754,19 +984,14 @@ const response = await fetch('/api/live/token', {
   });
 
   window.addEventListener('unilearn:language-changed', () => {
-    updateSessionCopy();
+    updateSessionCopy(); 
     renderParticipants();
     renderHands();
+    renderSpeakRequests();
   });
 
   window.addEventListener('beforeunload', () => {
     cleanup();
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && window.innerWidth <= 768) {
-      shell.closeSidebar();
-    }
   });
 
   elements.localAvatar.textContent = userName.charAt(0).toUpperCase() || 'S';
@@ -775,9 +1000,10 @@ const response = await fetch('/api/live/token', {
   updateViewerCount();
   renderParticipants();
   renderHands();
+  renderSpeakRequests();
   updateLocalMediaState();
   updateRemoteMediaState();
-  setViewMode('dual');
+  setViewMode('single-speaker');
   startTimer();
   initSocket();
   initAgora();
