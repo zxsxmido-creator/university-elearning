@@ -378,7 +378,7 @@
   function init({
     translations = {},
     defaultProfile = {},
-    defaultLanguage = 'en',
+    defaultLanguage = 'ar', // تم تغيير اللغة الافتراضية هنا للعربية
     logoutPath = 'login.html',
     sidebarSelector = '.sidenav',
     closeSidebarOnLinkClick = true,
@@ -389,7 +389,8 @@
     ensureProfileModal();
 
     const state = {
-      language: localStorage.getItem(STORAGE_KEYS.language) || defaultLanguage,
+      // تعديل Claude لضمان اللغة العربية كافتراضي
+      language: localStorage.getItem(STORAGE_KEYS.language) || defaultLanguage || 'ar',
       stagedAvatar: null
     };
 
@@ -404,7 +405,7 @@
     const modalAvatarPreview = document.getElementById('profileAvatarPreview');
     const profileStatus = document.getElementById('profileStatus');
     const userChip = document.getElementById('userChip');
-    const languageToggle = document.getElementById('languageToggle');
+    const languageToggle = document.getElementById('languageToggle'); // الزرار القديم
     const sidebar = document.querySelector(sidebarSelector);
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     let mobileBackdrop = document.getElementById('mobileNavBackdrop');
@@ -417,6 +418,43 @@
       mobileBackdrop.setAttribute('aria-label', 'Close sidebar');
       document.body.appendChild(mobileBackdrop);
     }
+
+    // --- GLOBAL SIDEBAR LANG TOGGLE (تعديل Claude) ---
+    function syncSidebarLangToggle() {
+      const btn = document.getElementById('sidebarLangToggle');
+      if (!btn) return;
+      btn.querySelectorAll('[data-lang-option]').forEach(el => {
+        el.classList.toggle('active', el.dataset.langOption === state.language);
+      });
+    }
+
+    function injectSidebarLangToggle() {
+      if (document.getElementById('sidebarLangToggle')) return;
+      const navLinks = document.querySelector('.nav-links');
+      if (!navLinks) return;
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'padding: 8px 12px 0; margin-bottom: auto;'; // margin-bottom لدفع القائمة للأسفل
+      wrapper.innerHTML = `
+        <button id="sidebarLangToggle" type="button" class="lang-toggle" style="width:100%; border-radius:10px; justify-content:center; display:flex; gap: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: inherit; padding: 12px; cursor: pointer; font-weight: bold;">
+          <span class="lang-option ${state.language === 'en' ? 'active' : ''}" data-lang-option="en" style="opacity: ${state.language === 'en' ? '1' : '0.5'}">EN</span>
+          <span class="lang-separator" style="opacity: 0.3">/</span>
+          <span class="lang-option ${state.language === 'ar' ? 'active' : ''}" data-lang-option="ar" style="opacity: ${state.language === 'ar' ? '1' : '0.5'}">AR</span>
+        </button>
+      `;
+      navLinks.appendChild(wrapper);
+      
+      const newBtn = document.getElementById('sidebarLangToggle');
+      newBtn.addEventListener('click', () => {
+        setLanguage(state.language === 'en' ? 'ar' : 'en');
+        // تحديث شفافية الأزرار بناءً على الاختيار
+        newBtn.querySelector('[data-lang-option="en"]').style.opacity = state.language === 'en' ? '1' : '0.5';
+        newBtn.querySelector('[data-lang-option="ar"]').style.opacity = state.language === 'ar' ? '1' : '0.5';
+      });
+    }
+    
+    // تشغيل الدالة لإضافة الزرار في الشريط الجانبي
+    injectSidebarLangToggle();
+    // ------------------------------------------------
 
     function closeSidebar() {
       if (!sidebar) return;
@@ -561,10 +599,12 @@
       setTimeout(closeProfileModal, 180);
     }
 
+    // --- تعديل Claude لتحديث الشريط الجانبي عند تغيير اللغة ---
     function setLanguage(nextLanguage) {
       state.language = nextLanguage;
       localStorage.setItem(STORAGE_KEYS.language, nextLanguage);
       applyStaticTranslations();
+      syncSidebarLangToggle(); // السطر المضاف هنا
       window.dispatchEvent(new CustomEvent('unilearn:language-changed', {
         detail: { language: nextLanguage }
       }));
@@ -582,6 +622,7 @@
       });
     }
 
+    // زرار اللغة القديم لو لسه موجود في بعض الصفحات هيفضل شغال
     if (languageToggle) {
       languageToggle.addEventListener('click', () => {
         setLanguage(state.language === 'en' ? 'ar' : 'en');
