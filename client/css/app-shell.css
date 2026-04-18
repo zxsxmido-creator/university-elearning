@@ -112,8 +112,9 @@ a {
   text-transform: uppercase;
 }
 
+/* --- تعديل Claude لتقليل المسافات الزايدة فوق البروفايل --- */
 .nav-links {
-  flex: 1;
+  flex: 0 0 auto; /* don't stretch */
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -182,9 +183,11 @@ a {
   background: rgba(255, 255, 255, 0.25);
 }
 
+/* --- تعديل Claude عشان يدفع البروفايل لتحت بس لو فيه مساحة --- */
 .nav-footer {
   padding: 16px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: auto; 
 }
 
 .user-chip {
@@ -893,6 +896,7 @@ html[dir='rtl'] .profile-identity {
   }
 }
 
+/* --- تعديل Claude لضمان ظهور البروفايل على الموبايل من غير سكرول --- */
 @media (max-width: 768px) {
   :root {
     --nav-width: 0px;
@@ -904,6 +908,9 @@ html[dir='rtl'] .profile-identity {
     transform: translateX(-105%);
     transition: transform 0.24s ease;
     box-shadow: var(--shadow-lg);
+    flex-direction: column;
+    overflow-y: auto;
+    justify-content: space-between; /* To push header/links up and footer down */
   }
 
   .sidenav.mobile-open {
@@ -953,6 +960,18 @@ html[dir='rtl'] .profile-identity {
 
   html[dir='rtl'] .sidenav.mobile-open {
     transform: translateX(0);
+  }
+
+  .nav-links {
+    flex: 0 0 auto;
+    overflow-y: visible;
+  }
+
+  .nav-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--ink);
+    z-index: 1;
   }
 
   .profile-modal-overlay {
