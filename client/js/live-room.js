@@ -261,16 +261,19 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     });
   }
 
-  function applyRoleUI() {
+function applyRoleUI() {
     const camBtn = document.getElementById('toggleCam');
+    const screenBtn = document.getElementById('toggleScreen'); 
     const raiseHandBtn = document.getElementById('raiseHandBtn');
 
     if (isInstructor) {
       if (camBtn) camBtn.style.display = 'inline-flex';
+      if (screenBtn) screenBtn.style.display = 'inline-flex';
       if (raiseHandBtn) raiseHandBtn.style.display = 'none';
       if (elements.micBtnLabel) elements.micBtnLabel.textContent = shell.t('liveRoom.mic');
     } else {
       if (camBtn) camBtn.style.display = 'none';
+      if (screenBtn) screenBtn.style.display = 'none';
       if (raiseHandBtn) raiseHandBtn.style.display = 'inline-flex';
       if (elements.micBtnLabel) {
         elements.micBtnLabel.textContent = state.micRequested

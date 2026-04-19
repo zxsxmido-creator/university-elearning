@@ -34,6 +34,13 @@ module.exports = (io) => {
       io.to(roomId).emit('raised-hands', room.raisedHands);
     });
 
+    // 👇 الإضافة الجديدة الخاصة بطلب فتح المايك 👇
+    socket.on('speak-request', ({ roomId, user }) => {
+      // إرسال الطلب لكل الناس في الغرفة (والأدمن هيستقبله في الواجهة)
+      socket.to(roomId).emit('speak-request', { id: socket.id, user });
+    });
+    // 👆 نهاية الإضافة 👆
+
     socket.on('instructor-signal', ({ roomId, type, targetId, data }) => {
       io.to(roomId).emit('instructor-signal', { type, senderId: socket.id, targetId, data });
     });

@@ -34,7 +34,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
+ height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -208,6 +208,7 @@ textarea {
 
 .room-layout {
   flex: 1;
+  height: calc(100dvh - var(--topbar-height));
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
