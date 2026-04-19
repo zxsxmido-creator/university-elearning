@@ -985,6 +985,13 @@ function applyRoleUI() {
     await cleanup();
     window.location.href = 'dashboard.html';
   });
+  // كود تشغيل زرار التحديث
+  document.getElementById('refreshBtn')?.addEventListener('click', () => {
+    // رسالة تأكيد عشان لو داس عليه بالغلط ميخرجوش من البث
+    if (window.confirm('هل تريد تحديث الصفحة وإعادة الاتصال بالبث؟')) {
+      window.location.reload();
+    }
+  });
 
   window.addEventListener('unilearn:language-changed', () => {
     updateSessionCopy(); 
