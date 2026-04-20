@@ -71,7 +71,11 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         handRaisedToast: '{{name}} raised their hand',
         lowerHand: 'Lower',
         leaveConfirm: 'Leave this session?',
-        defaultSession: 'Live Session'
+        defaultSession: 'Live Session',
+        reqBroadcast: 'Request Broadcast'
+
+        
+
       }
     },
     ar: {
@@ -143,7 +147,9 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         handRaisedToast: 'رفع {{name}} يده',
         lowerHand: 'خفض',
         leaveConfirm: 'هل تريد مغادرة هذه الجلسة؟',
-        defaultSession: 'جلسة مباشرة'
+        defaultSession: 'جلسة مباشرة',
+        reqBroadcast: 'طلب البث'
+
       }
     }
   };
@@ -799,11 +805,14 @@ function applyRoleUI() {
         if (otherInstructors.length === 0) {
           state.isHost = true;
           state.isBroadcasting = true;
+        } else if (!state.isBroadcasting) {
+          // Secondary instructor joining a room that already has a host
+          state.isHost = false;
         }
       }
-      // ── END NEW ──────────────────────────────────────────────────────────
 
-      state.participants.clear();
+      // ── END NEW ──────────────────────────────────────────────────────────
+       state.participants.clear();
       users.forEach((user) => {
         if (user.name !== userName || user.role !== userRole) {
           state.participants.set(user.id, user);
@@ -813,6 +822,7 @@ function applyRoleUI() {
       updateViewerCount();
       renderParticipants();
       renderHands();
+      applyRoleUI();
     });
 
     state.socket.on('user-joined', (user) => {
@@ -914,8 +924,8 @@ function applyRoleUI() {
     });
 
     // Admin receives speak request from student
-    state.socket.on('speak-request', ({ id, user }) => {
-      if (!isInstructor) return;
+     state.socket.on('speak-request', ({ id, user }) => {
+      if (!state.isHost) return;
       const already = state.speakRequests.find((r) => r.id === id);
       if (already) return;
       state.speakRequests.push({ id, user });

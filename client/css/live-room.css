@@ -31,11 +31,16 @@
 
 html, body {
   height: 100%;
-  height: 100dvh; /* ده السطر السحري للموبايل */
   width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  html, body {
+    height: 100dvh;
+  }
 }
 
 body {
@@ -739,32 +744,13 @@ textarea {
   padding: 12px 18px;
   border-top: 1px solid var(--border);
   background: var(--bg-panel);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.view-modes {
-  display: flex;
-  gap: 6px;
-  margin-right: 6px;
-}
-
-.view-mode-btn {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.view-mode-btn.active {
-  border-color: rgba(0, 212, 255, 0.34);
-  background: rgba(0, 212, 255, 0.1);
-  color: var(--accent-primary);
+.control-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .ctrl-btn,
@@ -790,8 +776,6 @@ textarea {
 .ctrl-btn:focus-visible,
 .end-btn:hover,
 .end-btn:focus-visible,
-.view-mode-btn:hover,
-.view-mode-btn:focus-visible,
 .send-btn:hover,
 .send-btn:focus-visible {
   outline: none;
@@ -814,6 +798,13 @@ textarea {
   border-color: rgba(255, 214, 10, 0.4);
   background: rgba(255, 214, 10, 0.12);
   color: var(--accent-hand);
+}
+
+.ctrl-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
 }
 
 .hand-icon-label {
@@ -910,10 +901,6 @@ html[dir='rtl'] .mute-participant-btn {
   margin-right: 8px;
 }
 
-html[dir='rtl'] .view-modes {
-  margin-right: 0;
-  margin-left: 6px;
-}
 
 /* Mobile Fixes */
 @media (max-width: 768px) {
@@ -923,7 +910,7 @@ html[dir='rtl'] .view-modes {
 
   .topbar {
     height: auto;
-    padding: 14px 16px;
+    padding: 10px 16px;
     flex-wrap: wrap;
   }
 
@@ -933,6 +920,12 @@ html[dir='rtl'] .view-modes {
     flex-wrap: wrap;
   }
 
+  .sidebar.mobile-open {
+    top: 0;
+    padding-top: 10px;
+  }
+
+
 .room-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
@@ -940,8 +933,9 @@ html[dir='rtl'] .view-modes {
     min-height: 0;
   }
   
-  .video-stage {
-    min-height: 0; /* عشان الفيديو ميزقش الزراير لتحت */
+.video-stage {
+    min-height: 0;
+    max-height: 100%;
   }
 
   .sidebar {
@@ -978,10 +972,8 @@ html[dir='rtl'] .view-modes {
     display: none; /* Hide scrollbar for Chrome/Safari */
   }
 
-  .ctrl-btn, 
-  .end-btn, 
-  .view-mode-btn,
-  .view-modes {
+ .ctrl-btn,
+  .end-btn {
     flex-shrink: 0;
   }
 
