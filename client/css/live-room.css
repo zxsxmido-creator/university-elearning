@@ -976,7 +976,11 @@ html[dir='rtl'] .mute-participant-btn {
   .end-btn {
     flex-shrink: 0;
   }
-
+ctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
   .video-grid.dual,
   .video-grid.screenshare {
     grid-template-columns: 1fr;
