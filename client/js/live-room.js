@@ -194,7 +194,9 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     timerSeconds: 0,
     timerInterval: null,
     viewMode: 'single-speaker', // Default Single Camera
-    focusedSlot: 'local'
+    focusedSlot: 'local',
+    isHost: false,        // ← NEW: true when this instructor is the room owner
+    isBroadcasting: false // ← NEW: true when this instructor is live on cam/mic
   };
 
   const shell = window.UniLearnShell.init({
@@ -235,9 +237,11 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     toggleScreen: document.getElementById('toggleScreen'),
     raiseHand: document.getElementById('raiseHandBtn'),
     endBtn: document.getElementById('endBtn'),
-    slotLocal: document.getElementById('slot-local'),
-    slotRemote: document.getElementById('slot-remote')
+        slotLocal: document.getElementById('slot-local'),
+    slotRemote: document.getElementById('slot-remote'),
+    reqBroadcastBtn: document.getElementById('reqBroadcastBtn') // ← NEW
   };
+
 
   function getSessionTitle() {
     return SESSION_TITLES[channel] || {
@@ -263,17 +267,39 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
 function applyRoleUI() {
     const camBtn = document.getElementById('toggleCam');
-    const screenBtn = document.getElementById('toggleScreen'); 
+    const screenBtn = document.getElementById('toggleScreen');
     const raiseHandBtn = document.getElementById('raiseHandBtn');
+    // ── NEW refs ──────────────────────────────────────────────────────────
+    const reqBroadcastBtn = elements.reqBroadcastBtn;
 
     if (isInstructor) {
-      if (camBtn) camBtn.style.display = 'inline-flex';
-      if (screenBtn) screenBtn.style.display = 'inline-flex';
-      if (raiseHandBtn) raiseHandBtn.style.display = 'none';
-      if (elements.micBtnLabel) elements.micBtnLabel.textContent = shell.t('liveRoom.mic');
+      if (state.isBroadcasting || state.isHost) {
+        // ── Full broadcast controls ──────────────────────────────────────
+        if (camBtn) camBtn.style.display = 'inline-flex';
+        if (screenBtn) screenBtn.style.display = 'inline-flex';
+        if (raiseHandBtn) raiseHandBtn.style.display = 'none';
+        if (reqBroadcastBtn) reqBroadcastBtn.style.display = 'none';
+        if (elements.micBtnLabel) elements.micBtnLabel.textContent = shell.t('liveRoom.mic');
+      } else {
+        // ── Secondary instructor — waiting for broadcast approval ─────────
+        if (camBtn) camBtn.style.display = 'none';
+        if (screenBtn) screenBtn.style.display = 'none';
+        if (raiseHandBtn) raiseHandBtn.style.display = 'none';
+        if (reqBroadcastBtn) {
+          reqBroadcastBtn.style.display = 'inline-flex';
+          reqBroadcastBtn.disabled = state.micRequested; // dim after request sent
+        }
+        if (elements.micBtnLabel) {
+          elements.micBtnLabel.textContent = state.micRequested
+            ? shell.t('liveRoom.requestSent').split('.')[0]
+            : shell.t('liveRoom.mic');
+        }
+      }
     } else {
+      // ── Student ───────────────────────────────────────────────────────
       if (camBtn) camBtn.style.display = 'none';
       if (screenBtn) screenBtn.style.display = 'none';
+      if (reqBroadcastBtn) reqBroadcastBtn.style.display = 'none';
       if (raiseHandBtn) raiseHandBtn.style.display = 'inline-flex';
       if (elements.micBtnLabel) {
         elements.micBtnLabel.textContent = state.micRequested
@@ -282,9 +308,10 @@ function applyRoleUI() {
       }
     }
 
+    // ── Requests tab: only the host sees it ──────────────────────────────
     const requestsTabBtn = document.querySelector('[data-tab="requests"]');
     if (requestsTabBtn) {
-      requestsTabBtn.style.display = isInstructor ? 'inline-flex' : 'none';
+      requestsTabBtn.style.display = state.isHost ? 'inline-flex' : 'none'; // ← was: isInstructor
     }
   }
 
@@ -396,10 +423,14 @@ function applyRoleUI() {
     state.speakRequests = state.speakRequests.filter((r) => r.id !== id);
     state.approvedSpeakers.add(id);
 
+    // ── NEW: route to the correct signal type ─────────────────────────────
+    const signalType = user.reqType === 'broadcast' ? 'broadcast-approved' : 'speak-approved';
+    // ── END NEW ───────────────────────────────────────────────────────────
+
     if (state.socketConnected) {
       state.socket.emit('instructor-signal', {
         roomId: channel,
-        type: 'speak-approved',
+        type: signalType, // ← was hard-coded 'speak-approved'
         targetId: id,
         data: { user }
       });
@@ -758,6 +789,20 @@ function applyRoleUI() {
     });
 
     state.socket.on('room-users', (users) => {
+      // ── NEW: Auto-detect host ────────────────────────────────────────────
+      if (isInstructor) {
+        const otherInstructors = users.filter(
+          (u) =>
+            (u.role === 'instructor' || u.role === 'admin') &&
+            (u.name !== userName || u.role !== userRole)
+        );
+        if (otherInstructors.length === 0) {
+          state.isHost = true;
+          state.isBroadcasting = true;
+        }
+      }
+      // ── END NEW ──────────────────────────────────────────────────────────
+
       state.participants.clear();
       users.forEach((user) => {
         if (user.name !== userName || user.role !== userRole) {
@@ -843,6 +888,29 @@ function applyRoleUI() {
         applyRoleUI();
         pushNotification(shell.t('liveRoom.studentMicLocked'), '');
       }
+
+      // ── NEW: broadcast approved for secondary instructor ──────────────
+      if (type === 'broadcast-approved' && isMe) {
+        state.isBroadcasting = true;
+        state.micRequested = false;
+
+        // Start local video preview
+        if (state.localVideoTrack) {
+          state.localVideoTrack.play('slot-local-media');
+        }
+
+        // Publish tracks to Agora (guard: not yet published)
+        if (state.agoraClient && state.localAudioTrack && state.localVideoTrack) {
+          state.agoraClient
+            .publish([state.localAudioTrack, state.localVideoTrack])
+            .catch((err) => console.warn('Broadcast publish failed:', err));
+        }
+
+        applyRoleUI();
+        setViewMode('dual');
+        pushNotification(shell.t('liveRoom.requestApproved'), 'notif-user');
+      }
+      // ── END NEW ───────────────────────────────────────────────────────
     });
 
     // Admin receives speak request from student
@@ -979,6 +1047,21 @@ function applyRoleUI() {
   });
 
   elements.raiseHand.addEventListener('click', toggleLocalHand);
+
+  // ── NEW: Request Broadcast button (secondary instructor) ──────────────────
+  elements.reqBroadcastBtn?.addEventListener('click', () => {
+    if (state.micRequested) return; // already waiting — ignore double-tap
+    state.micRequested = true;
+    applyRoleUI();
+    if (state.socketConnected) {
+      state.socket.emit('speak-request', {
+        roomId: channel,
+        user: { name: userName, role: userRole, reqType: 'broadcast' }
+      });
+    }
+    pushNotification(shell.t('liveRoom.requestSent'), '');
+  });
+  // ── END NEW ───────────────────────────────────────────────────────────────
 
   elements.endBtn.addEventListener('click', async () => {
     if (!window.confirm(shell.t('liveRoom.leaveConfirm'))) return;
