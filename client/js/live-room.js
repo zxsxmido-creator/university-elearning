@@ -972,14 +972,7 @@ function applyRoleUI() {
 
   document.getElementById('sendBtn').addEventListener('click', sendMessage);
 
-  document.getElementById('viewDual').addEventListener('click', () => setViewMode('dual'));
-  document.getElementById('viewSingle').addEventListener('click', () => {
-    if (state.focusedSlot !== 'local' && !participantList().some((participant) => !participant.isLocal)) {
-      state.focusedSlot = 'local';
-    }
-    setViewMode('single-speaker');
-  });
-  document.getElementById('viewScreen').addEventListener('click', () => setViewMode('screenshare'));
+
 
   elements.slotLocal.addEventListener('click', () => {
     if (state.viewMode === 'single-speaker') {
