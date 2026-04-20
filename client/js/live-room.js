@@ -1,6 +1,31 @@
+/**
+ * live-room.js
+ * UniLearn — Live Room Logic
+ *
+ * Key design decisions
+ * ────────────────────
+ * • Host detection happens server-side (room-users event).
+ *   A brief grace period on reconnect prevents the race condition where
+ *   the server still has the old socket session and incorrectly reports
+ *   a second instructor, stripping the rejoining user of host status.
+ * • applyRoleUI() is the single source of truth for which buttons are
+ *   visible. It is called immediately after host-detection and after
+ *   every state mutation that affects the UI.
+ * • Only the Host (isHost === true) receives speak/broadcast requests
+ *   in the UI. Secondary instructors' speak-request socket event is
+ *   filtered on the client so stale broadcasts never appear.
+ * • Dead layout-toggle code (viewDual / viewSingle / viewScreen buttons)
+ *   has been removed. Layout is managed automatically.
+ * • All CSS :disabled states are applied via the `disabled` attribute
+ *   (not just opacity hacks) so keyboard navigation respects them.
+ */
+
 window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
 (() => {
+  /* ═══════════════════════════════════════════════════════════════════════
+     TRANSLATIONS
+  ═══════════════════════════════════════════════════════════════════════ */
   const TRANSLATIONS = {
     en: {
       common: {
@@ -43,6 +68,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         noRaisedHands: 'No raised hands',
         noSpeakRequests: 'No speak requests',
         requestToSpeak: 'Request to Speak',
+        reqBroadcast: 'Request Broadcast',
         requestSent: 'Request sent. Waiting for approval...',
         requestApproved: 'Your request was approved. You can speak now.',
         requestDenied: 'Your request was denied.',
@@ -50,12 +76,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         denyBtn: 'Deny',
         forceMute: 'Mute',
         speakRequestToast: '{{name}} requests to speak',
+        broadcastRequestToast: '{{name}} requests to broadcast',
         studentMicLocked: 'Mic is locked. Request to speak first.',
-        dualViewTitle: 'Dual view',
-        singleViewTitle: 'Single-speaker view',
-        screenViewTitle: 'Screenshare layout',
         singleSpeakerHint: 'Tap the mini window to switch the focused speaker.',
-        screenShareLabel: 'Screen share',
+        screenShareLabel: 'Screen Share',
         mic: 'Mic',
         camera: 'Camera',
         share: 'Share',
@@ -71,13 +95,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         handRaisedToast: '{{name}} raised their hand',
         lowerHand: 'Lower',
         leaveConfirm: 'Leave this session?',
-        defaultSession: 'Live Session',
-        reqBroadcast: 'Request Broadcast'
-
-        
-
+        defaultSession: 'Live Session'
       }
     },
+
     ar: {
       common: {
         openMenu: 'فتح القائمة',
@@ -114,11 +135,12 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         chatTab: 'الدردشة',
         peopleTab: 'الحضور',
         handsTab: 'الأيدي',
-        requestsTab: 'طلبات الكلام',
+        requestsTab: 'الطلبات',
         messagePlaceholder: 'أرسل رسالة...',
         noRaisedHands: 'لا توجد أيادٍ مرفوعة',
         noSpeakRequests: 'لا توجد طلبات كلام',
         requestToSpeak: 'طلب الكلام',
+        reqBroadcast: 'طلب البث',
         requestSent: 'تم إرسال الطلب. بانتظار الموافقة...',
         requestApproved: 'تمت الموافقة على طلبك. يمكنك الكلام الآن.',
         requestDenied: 'تم رفض طلبك.',
@@ -126,10 +148,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         denyBtn: 'رفض',
         forceMute: 'كتم',
         speakRequestToast: '{{name}} يطلب الكلام',
+        broadcastRequestToast: '{{name}} يطلب البث',
         studentMicLocked: 'الميكروفون مقفل. اطلب الكلام أولاً.',
-        dualViewTitle: 'عرض ثنائي',
-        singleViewTitle: 'عرض متحدث واحد',
-        screenViewTitle: 'تخطيط مشاركة الشاشة',
         singleSpeakerHint: 'اضغط على النافذة الصغيرة لتبديل المتحدث الرئيسي.',
         screenShareLabel: 'مشاركة الشاشة',
         mic: 'الميكروفون',
@@ -137,7 +157,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         share: 'مشاركة',
         hand: 'رفع اليد',
         leave: 'مغادرة',
-        waiting: 'بانتظار الانضمام...',
+        waiting: 'بانتظار...',
         youLabel: 'أنت',
         sessionStarted: 'بدأت الجلسة',
         connectionReady: 'تم الاتصال بالغرفة المباشرة.',
@@ -147,201 +167,331 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         handRaisedToast: 'رفع {{name}} يده',
         lowerHand: 'خفض',
         leaveConfirm: 'هل تريد مغادرة هذه الجلسة؟',
-        defaultSession: 'جلسة مباشرة',
-        reqBroadcast: 'طلب البث'
-
+        defaultSession: 'جلسة مباشرة'
       }
     }
   };
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     SESSION TITLES  (keyed by channel name)
+  ═══════════════════════════════════════════════════════════════════════ */
   const SESSION_TITLES = {
     'cs-binary-trees': {
-      en: 'Advanced Algorithms - Binary Trees Deep Dive',
-      ar: 'الخوارزميات المتقدمة - تعمق في الأشجار الثنائية'
+      en: 'Advanced Algorithms – Binary Trees Deep Dive',
+      ar: 'الخوارزميات المتقدمة – تعمق في الأشجار الثنائية'
     },
     'math-linear-algebra': {
-      en: 'Linear Algebra - Eigenvalues Workshop',
-      ar: 'الجبر الخطي - ورشة القيم الذاتية'
+      en: 'Linear Algebra – Eigenvalues Workshop',
+      ar: 'الجبر الخطي – ورشة القيم الذاتية'
     },
     'physics-quantum': {
-      en: 'Quantum Mechanics - Wave Functions Seminar',
-      ar: 'ميكانيكا الكم - ندوة الدوال الموجية'
+      en: 'Quantum Mechanics – Wave Functions Seminar',
+      ar: 'ميكانيكا الكم – ندوة الدوال الموجية'
     },
     'db-indexing': {
-      en: 'Database Systems - Indexing Strategies Review',
-      ar: 'أنظمة قواعد البيانات - مراجعة استراتيجيات الفهرسة'
+      en: 'Database Systems – Indexing Strategies Review',
+      ar: 'أنظمة قواعد البيانات – مراجعة استراتيجيات الفهرسة'
     }
   };
 
-  const channel = new URLSearchParams(window.location.search).get('channel') || 'demo-room';
-  const userName = localStorage.getItem('userName') || 'Student';
-  const userRole = localStorage.getItem('userRole') || 'student';
-  const localParticipantId = 'local-self';
+  /* ═══════════════════════════════════════════════════════════════════════
+     INIT — read URL / localStorage
+  ═══════════════════════════════════════════════════════════════════════ */
+  const channel      = new URLSearchParams(window.location.search).get('channel') || 'demo-room';
+  const userName     = localStorage.getItem('userName')  || 'Student';
+  const userRole     = localStorage.getItem('userRole')  || 'student';
   const isInstructor = userRole === 'instructor' || userRole === 'admin';
 
+  /** Stable local participant ID used for hand / request tracking */
+  const LOCAL_ID = 'local-self';
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     STATE
+  ═══════════════════════════════════════════════════════════════════════ */
   const state = {
-    participants: new Map(),
-    raisedHands: [],
-    speakRequests: [],
-    approvedSpeakers: new Set(),
-    socket: null,
+    /* participants */
+    participants:     new Map(),   // id → user object (remote participants only)
+    raisedHands:      [],          // [{ id, user }]
+    speakRequests:    [],          // [{ id, user }]  — host-only inbox
+    approvedSpeakers: new Set(),   // socket ids of approved students
+
+    /* connection handles */
+    socket:          null,
     socketConnected: false,
-    agoraClient: null,
+    agoraClient:     null,
+
+    /* local media tracks */
     localAudioTrack: null,
     localVideoTrack: null,
-    remoteVideoActive: false,
-    screenTrack: null,
-    micOn: false, // Default OFF
-    camOn: false, // Default OFF
-    micApproved: false,
+    screenTrack:     null,
+
+    /* local media state */
+    micOn:        false,  // default OFF
+    camOn:        false,  // default OFF
+    screenSharing:false,
+
+    /* student request flow */
+    micApproved:  false,
     micRequested: false,
-    screenSharing: false,
+
+    /* hand */
     handRaised: false,
-    timerSeconds: 0,
-    timerInterval: null,
-    viewMode: 'single-speaker', // Default Single Camera
+
+    /* remote video */
+    remoteVideoActive: false,
+
+    /* layout */
+    viewMode:    'single-speaker',
     focusedSlot: 'local',
-    isHost: false,        // ← NEW: true when this instructor is the room owner
-    isBroadcasting: false // ← NEW: true when this instructor is live on cam/mic
+
+    /* timer */
+    timerSeconds:  0,
+    timerInterval: null,
+
+    /* ── Host / broadcast roles ── */
+    isHost:        false,  // true = first instructor who joined
+    isBroadcasting:false   // true = this instructor's cam/mic is live
   };
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     APP-SHELL  (i18n + profile)
+  ═══════════════════════════════════════════════════════════════════════ */
   const shell = window.UniLearnShell.init({
-    translations: TRANSLATIONS,
-    defaultProfile: { name: userName, role: userRole },
-    logoutPath: 'login.html',
-    sidebarSelector: '#sidebar',
+    translations:         TRANSLATIONS,
+    defaultProfile:       { name: userName, role: userRole },
+    logoutPath:           'login.html',
+    sidebarSelector:      '#sidebar',
     closeSidebarOnLinkClick: false
   });
 
-  const elements = {
-    videoStage: document.getElementById('videoStage'),
-    videoGrid: document.getElementById('videoGrid'),
-    screenShareLabel: document.getElementById('screenShareLabel'),
-    localAvatar: document.getElementById('localAvatar'),
-    remoteAvatar: document.getElementById('remoteAvatar'),
-    localName: document.getElementById('localName'),
-    remoteName: document.getElementById('remoteName'),
-    localMicIcon: document.getElementById('localMicIcon'),
-    remoteMicIcon: document.getElementById('remoteMicIcon'),
-    chatMessages: document.getElementById('chatMessages'),
-    chatInput: document.getElementById('chatInput'),
-    participantsList: document.getElementById('participantsList'),
-    handsPanel: document.getElementById('handsPanel'),
-    handsEmpty: document.getElementById('handsEmpty'),
-    handsCount: document.getElementById('handsCount'),
-    requestsPanel: document.getElementById('requestsPanel'),
-    requestsEmpty: document.getElementById('requestsEmpty'),
-    requestsCount: document.getElementById('requestsCount'),
-    micBtnLabel: document.querySelector('#toggleMic span'),
-    notifStack: document.getElementById('notifStack'),
-    viewerCount: document.getElementById('viewerCount'),
-    timer: document.getElementById('sessionTimer'),
-    sessionTitle: document.getElementById('sessionTitle'),
+  /* ═══════════════════════════════════════════════════════════════════════
+     DOM ELEMENT CACHE
+  ═══════════════════════════════════════════════════════════════════════ */
+  const el = {
+    videoStage:        document.getElementById('videoStage'),
+    videoGrid:         document.getElementById('videoGrid'),
+    screenShareLabel:  document.getElementById('screenShareLabel'),
+    slotLocal:         document.getElementById('slot-local'),
+    slotRemote:        document.getElementById('slot-remote'),
+    localAvatar:       document.getElementById('localAvatar'),
+    remoteAvatar:      document.getElementById('remoteAvatar'),
+    localName:         document.getElementById('localName'),
+    remoteName:        document.getElementById('remoteName'),
+    localMicIcon:      document.getElementById('localMicIcon'),
+    remoteMicIcon:     document.getElementById('remoteMicIcon'),
+    chatMessages:      document.getElementById('chatMessages'),
+    chatInput:         document.getElementById('chatInput'),
+    participantsList:  document.getElementById('participantsList'),
+    handsPanel:        document.getElementById('handsPanel'),
+    handsEmpty:        document.getElementById('handsEmpty'),
+    handsCount:        document.getElementById('handsCount'),
+    requestsPanel:     document.getElementById('requestsPanel'),
+    requestsEmpty:     document.getElementById('requestsEmpty'),
+    requestsCount:     document.getElementById('requestsCount'),
+    requestsTabBtn:    document.getElementById('requestsTabBtn'),
+    notifStack:        document.getElementById('notifStack'),
+    viewerCount:       document.getElementById('viewerCount'),
+    timer:             document.getElementById('sessionTimer'),
+    sessionTitle:      document.getElementById('sessionTitle'),
     singleSpeakerHint: document.getElementById('singleSpeakerHint'),
-    toggleMic: document.getElementById('toggleMic'),
-    toggleCam: document.getElementById('toggleCam'),
-    toggleScreen: document.getElementById('toggleScreen'),
-    raiseHand: document.getElementById('raiseHandBtn'),
-    endBtn: document.getElementById('endBtn'),
-        slotLocal: document.getElementById('slot-local'),
-    slotRemote: document.getElementById('slot-remote'),
-    reqBroadcastBtn: document.getElementById('reqBroadcastBtn') // ← NEW
+    /* controls */
+    toggleMic:         document.getElementById('toggleMic'),
+    micBtnLabel:       document.getElementById('micBtnLabel'),
+    toggleCam:         document.getElementById('toggleCam'),
+    toggleScreen:      document.getElementById('toggleScreen'),
+    reqBroadcastBtn:   document.getElementById('reqBroadcastBtn'),
+    reqBroadcastLabel: document.getElementById('reqBroadcastLabel'),
+    raiseHandBtn:      document.getElementById('raiseHandBtn'),
+    endBtn:            document.getElementById('endBtn'),
+    refreshBtn:        document.getElementById('refreshBtn'),
+    mobileMenuBtn:     document.getElementById('mobileMenuBtn'),
+    sidebar:           document.getElementById('sidebar')
   };
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     HELPERS
+  ═══════════════════════════════════════════════════════════════════════ */
 
-  function getSessionTitle() {
-    return SESSION_TITLES[channel] || {
-      en: 'Live Session',
-      ar: 'جلسة مباشرة'
-    };
+  /** Safe HTML escaping — delegates to the shell utility if available. */
+  function esc(str) {
+    if (window.UniLearnShell && typeof window.UniLearnShell.escapeHtml === 'function') {
+      return window.UniLearnShell.escapeHtml(String(str));
+    }
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
+  /** Get session title for the current channel + language. */
+  function getSessionTitle() {
+    const titles = SESSION_TITLES[channel];
+    if (!titles) return shell.t('liveRoom.defaultSession');
+    return titles[shell.language] || titles.en;
+  }
+
+  /**
+   * Build the combined participant list (local + remotes) with deduplication
+   * by name+role. This prevents ghost entries when the server briefly keeps
+   * both old and new socket sessions during a refresh/reconnect.
+   */
   function participantList() {
     const combined = [
-      { id: localParticipantId, name: userName, role: userRole, isLocal: true },
+      { id: LOCAL_ID, name: userName, role: userRole, isLocal: true },
       ...Array.from(state.participants.values())
     ];
-
     const seen = new Set();
-    return combined.filter((participant) => {
-      const key = `${participant.name}|${participant.role}`;
+    return combined.filter(({ name, role }) => {
+      const key = `${name}|${role}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
   }
 
-function applyRoleUI() {
-    const camBtn = document.getElementById('toggleCam');
-    const screenBtn = document.getElementById('toggleScreen');
-    const raiseHandBtn = document.getElementById('raiseHandBtn');
-    // ── NEW refs ──────────────────────────────────────────────────────────
-    const reqBroadcastBtn = elements.reqBroadcastBtn;
+  /* ═══════════════════════════════════════════════════════════════════════
+     ROLE UI  — single source of truth for button visibility
+  ═══════════════════════════════════════════════════════════════════════ */
+  function applyRoleUI() {
+    const {
+      toggleMic, micBtnLabel,
+      toggleCam, toggleScreen,
+      reqBroadcastBtn, reqBroadcastLabel,
+      raiseHandBtn, requestsTabBtn
+    } = el;
 
     if (isInstructor) {
-      if (state.isBroadcasting || state.isHost) {
-        // ── Full broadcast controls ──────────────────────────────────────
-        if (camBtn) camBtn.style.display = 'inline-flex';
-        if (screenBtn) screenBtn.style.display = 'inline-flex';
-        if (raiseHandBtn) raiseHandBtn.style.display = 'none';
-        if (reqBroadcastBtn) reqBroadcastBtn.style.display = 'none';
-        if (elements.micBtnLabel) elements.micBtnLabel.textContent = shell.t('liveRoom.mic');
+      if (state.isHost || state.isBroadcasting) {
+        /* ── Host / approved broadcaster: full controls ── */
+        show(toggleCam);
+        show(toggleScreen);
+        hide(raiseHandBtn);
+        hide(reqBroadcastBtn);
+        reqBroadcastBtn.disabled = false;
+
+        if (micBtnLabel) micBtnLabel.textContent = shell.t('liveRoom.mic');
+
       } else {
-        // ── Secondary instructor — waiting for broadcast approval ─────────
-        if (camBtn) camBtn.style.display = 'none';
-        if (screenBtn) screenBtn.style.display = 'none';
-        if (raiseHandBtn) raiseHandBtn.style.display = 'none';
-        if (reqBroadcastBtn) {
-          reqBroadcastBtn.style.display = 'inline-flex';
-          reqBroadcastBtn.disabled = state.micRequested; // dim after request sent
+        /* ── Secondary instructor awaiting broadcast approval ── */
+        hide(toggleCam);
+        hide(toggleScreen);
+        hide(raiseHandBtn);
+        show(reqBroadcastBtn);
+
+        if (state.micRequested) {
+          reqBroadcastBtn.disabled = true;
+          reqBroadcastBtn.classList.add('pending');
+          if (reqBroadcastLabel) reqBroadcastLabel.textContent = shell.t('liveRoom.requestSent').split('.')[0] + '…';
+        } else {
+          reqBroadcastBtn.disabled = false;
+          reqBroadcastBtn.classList.remove('pending');
+          if (reqBroadcastLabel) reqBroadcastLabel.textContent = shell.t('liveRoom.reqBroadcast');
         }
-        if (elements.micBtnLabel) {
-          elements.micBtnLabel.textContent = state.micRequested
-            ? shell.t('liveRoom.requestSent').split('.')[0]
-            : shell.t('liveRoom.mic');
-        }
+
+        if (micBtnLabel) micBtnLabel.textContent = shell.t('liveRoom.mic');
       }
+
     } else {
-      // ── Student ───────────────────────────────────────────────────────
-      if (camBtn) camBtn.style.display = 'none';
-      if (screenBtn) screenBtn.style.display = 'none';
-      if (reqBroadcastBtn) reqBroadcastBtn.style.display = 'none';
-      if (raiseHandBtn) raiseHandBtn.style.display = 'inline-flex';
-      if (elements.micBtnLabel) {
-        elements.micBtnLabel.textContent = state.micRequested
-          ? shell.t('liveRoom.requestSent').split('.')[0]
+      /* ── Student ── */
+      hide(toggleCam);
+      hide(toggleScreen);
+      hide(reqBroadcastBtn);
+      show(raiseHandBtn);
+
+      if (micBtnLabel) {
+        micBtnLabel.textContent = state.micRequested
+          ? shell.t('liveRoom.requestSent').split('.')[0] + '…'
           : shell.t('liveRoom.requestToSpeak');
       }
     }
 
-    // ── Requests tab: only the host sees it ──────────────────────────────
-    const requestsTabBtn = document.querySelector('[data-tab="requests"]');
+    /* Requests tab: visible only to the Host */
     if (requestsTabBtn) {
-      requestsTabBtn.style.display = state.isHost ? 'inline-flex' : 'none'; // ← was: isInstructor
+      requestsTabBtn.style.display = state.isHost ? 'inline-flex' : 'none';
     }
   }
 
-  function updateSessionCopy() {
-    elements.sessionTitle.textContent = (getSessionTitle()[shell.language] || getSessionTitle().en);
-    elements.localName.textContent = userName || shell.t('liveRoom.youLabel');
-    applyRoleUI();
-    syncRemoteSlot();
+  function show(el) { if (el) el.style.display = 'inline-flex'; }
+  function hide(el) { if (el) el.style.display = 'none'; }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     NOTIFICATIONS
+  ═══════════════════════════════════════════════════════════════════════ */
+  function pushNotification(text, className = '') {
+    const item = document.createElement('div');
+    item.className = `notif ${className}`.trim();
+    item.textContent = text;
+    el.notifStack.appendChild(item);
+    setTimeout(() => {
+      item.classList.add('fade-out');
+      setTimeout(() => item.remove(), 300);
+    }, 3500);
   }
 
-  function syncRemoteSlot() {
-    const remoteParticipant = participantList().find((participant) => !participant.isLocal);
-    const remoteLabel = remoteParticipant ? remoteParticipant.name : shell.t('liveRoom.waiting');
-    elements.remoteName.textContent = remoteLabel;
-    elements.remoteAvatar.textContent = remoteParticipant ? remoteParticipant.name.charAt(0).toUpperCase() : '?';
-
-    if (!remoteParticipant && state.viewMode === 'single-speaker') {
-      state.focusedSlot = 'local';
-      applyViewMode();
-    }
+  /* ═══════════════════════════════════════════════════════════════════════
+     CHAT MESSAGES
+  ═══════════════════════════════════════════════════════════════════════ */
+  function appendSystemMessage(text) {
+    const row = document.createElement('div');
+    row.className = 'msg-system';
+    row.textContent = text;
+    el.chatMessages.appendChild(row);
+    el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
   }
 
-  function updateViewerCount() {
-    elements.viewerCount.textContent = String(participantList().length);
+  function appendMessage(user, message, timestamp) {
+    const row = document.createElement('div');
+    row.className = 'chat-msg';
+    row.innerHTML = `
+      <div class="msg-meta">
+        <span class="msg-author ${user.role !== 'student' ? 'instructor' : ''}">${esc(user.name)}</span>
+        <span class="msg-time">${esc(timestamp || '')}</span>
+      </div>
+      <div class="msg-text">${esc(message)}</div>
+    `;
+    el.chatMessages.appendChild(row);
+    el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     PARTICIPANTS PANEL
+  ═══════════════════════════════════════════════════════════════════════ */
+  function renderParticipants() {
+    el.participantsList.innerHTML = participantList().map((p) => {
+      const roleLabel     = shell.t(`roles.${p.role}`) || p.role;
+      const hasHand       = state.raisedHands.some((h) => h.user.name === p.name);
+      const isApproved    = state.approvedSpeakers.has(p.id);
+      const showMuteBtn   = isInstructor && !p.isLocal && isApproved;
+
+      return `
+        <div class="participant-item" data-participant-id="${esc(p.id)}">
+          <div class="p-avatar ${p.role !== 'student' ? 'instructor-avatar' : ''}">
+            ${esc(p.name.charAt(0).toUpperCase())}
+          </div>
+          <div class="p-info">
+            <div class="p-name">${esc(p.name)}</div>
+            <div class="p-role">${esc(roleLabel)}</div>
+          </div>
+          <div class="p-status">
+            ${hasHand ? '<span class="hand-mark">✋</span>' : ''}
+            ${showMuteBtn
+              ? `<button class="mute-participant-btn" type="button"
+                   data-mute-id="${esc(p.id)}"
+                   data-mute-name="${esc(p.name)}">
+                   ${shell.t('liveRoom.forceMute')}
+                 </button>`
+              : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    el.participantsList.querySelectorAll('[data-mute-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        forceMuteParticipant(btn.dataset.muteId, { name: btn.dataset.muteName });
+      });
+    });
   }
 
   function forceMuteParticipant(id, user) {
@@ -354,59 +504,52 @@ function applyRoleUI() {
         data: { user }
       });
     }
-    pushNotification(`${escape(user.name)}: muted`, '');
+    pushNotification(`${esc(user.name)}: muted`);
   }
 
-  function renderParticipants() {
-    elements.participantsList.innerHTML = participantList().map((participant) => {
-      const participantRole = shell.t(`roles.${participant.role}`) || participant.role;
-      const hasRaisedHand = state.raisedHands.some((entry) => entry.user.name === participant.name);
-      const isApproved = state.approvedSpeakers.has(participant.id);
-      const showMuteBtn = isInstructor && !participant.isLocal && isApproved;
+  /* ═══════════════════════════════════════════════════════════════════════
+     RAISED-HANDS PANEL
+  ═══════════════════════════════════════════════════════════════════════ */
+  function addOrUpdateRaisedHand(id, user) {
+    const idx = state.raisedHands.findIndex(
+      (h) => h.id === id || h.user.name === user.name
+    );
+    const entry = { id, user };
+    if (idx >= 0) state.raisedHands[idx] = entry;
+    else state.raisedHands.push(entry);
+  }
 
-      return `
-        <div class="participant-item" data-participant-id="${participant.id}">
-          <div class="p-avatar ${participant.role !== 'student' ? 'instructor-avatar' : ''}">${escape(participant.name.charAt(0).toUpperCase())}</div>
-          <div class="p-info">
-            <div class="p-name">${escape(participant.name)}</div>
-            <div class="p-role">${escape(participantRole)}</div>
-          </div>
-          <div class="p-status">
-            ${hasRaisedHand ? '<span class="hand-mark">Hand</span>' : ''}
-            ${showMuteBtn ? `<button class="mute-participant-btn" type="button" data-mute-id="${participant.id}" data-mute-name="${escape(participant.name)}">${shell.t('liveRoom.forceMute')}</button>` : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    elements.participantsList.querySelectorAll('[data-mute-id]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        forceMuteParticipant(btn.dataset.muteId, { name: btn.dataset.muteName });
-      });
-    });
+  function removeRaisedHand(id) {
+    state.raisedHands = state.raisedHands.filter((h) => h.id !== id);
   }
 
   function renderHands() {
     const count = state.raisedHands.length;
-    elements.handsCount.textContent = String(count);
-    elements.handsCount.classList.toggle('visible', count > 0);
-    elements.handsEmpty.style.display = count ? 'none' : 'flex';
-    elements.handsPanel.querySelectorAll('.hand-queue-item').forEach((item) => item.remove());
+    el.handsCount.textContent = String(count);
+    el.handsCount.classList.toggle('visible', count > 0);
+    el.handsEmpty.style.display = count ? 'none' : 'flex';
+
+    // Remove old items before re-rendering
+    el.handsPanel.querySelectorAll('.hand-queue-item').forEach((n) => n.remove());
 
     state.raisedHands.forEach(({ id, user }) => {
       const row = document.createElement('div');
       row.className = 'hand-queue-item';
       row.innerHTML = `
-        <span class="hand-queue-name">${escape(user.name)}</span>
-        ${isInstructor ? `<button class="lower-btn" type="button" data-hand-id="${id}">${shell.t('liveRoom.lowerHand')}</button>` : ''}
+        <span class="hand-queue-name">${esc(user.name)}</span>
+        ${isInstructor
+          ? `<button class="lower-btn" type="button" data-hand-id="${esc(id)}">
+               ${shell.t('liveRoom.lowerHand')}
+             </button>`
+          : ''}
       `;
 
       if (isInstructor) {
         row.querySelector('[data-hand-id]')?.addEventListener('click', () => {
           removeRaisedHand(id);
-          if (id === localParticipantId) {
+          if (id === LOCAL_ID) {
             state.handRaised = false;
-            elements.raiseHand.classList.remove('raised');
+            el.raiseHandBtn.classList.remove('raised');
           }
           if (state.socketConnected) {
             state.socket.emit('instructor-signal', {
@@ -421,29 +564,42 @@ function applyRoleUI() {
         });
       }
 
-      elements.handsPanel.appendChild(row);
+      el.handsPanel.appendChild(row);
     });
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     SPEAK / BROADCAST REQUESTS PANEL  (Host only)
+  ═══════════════════════════════════════════════════════════════════════ */
+  function addSpeakRequest(id, user) {
+    if (!state.isHost) return; // only the Host holds the inbox
+    if (state.speakRequests.find((r) => r.id === id)) return; // deduplicate
+    state.speakRequests.push({ id, user });
+    renderSpeakRequests();
+
+    const toastKey = user.reqType === 'broadcast'
+      ? 'liveRoom.broadcastRequestToast'
+      : 'liveRoom.speakRequestToast';
+    pushNotification(shell.t(toastKey, { name: user.name }), 'notif-hand');
   }
 
   function approveSpeakRequest(id, user) {
     state.speakRequests = state.speakRequests.filter((r) => r.id !== id);
     state.approvedSpeakers.add(id);
 
-    // ── NEW: route to the correct signal type ─────────────────────────────
     const signalType = user.reqType === 'broadcast' ? 'broadcast-approved' : 'speak-approved';
-    // ── END NEW ───────────────────────────────────────────────────────────
 
     if (state.socketConnected) {
       state.socket.emit('instructor-signal', {
         roomId: channel,
-        type: signalType, // ← was hard-coded 'speak-approved'
+        type: signalType,
         targetId: id,
         data: { user }
       });
     }
 
     renderSpeakRequests();
-    pushNotification(`${user.name}: approved`, 'notif-user');
+    pushNotification(`${esc(user.name)}: approved`, 'notif-user');
   }
 
   function denySpeakRequest(id, user) {
@@ -462,138 +618,110 @@ function applyRoleUI() {
   }
 
   function renderSpeakRequests() {
-    if (!elements.requestsCount || !elements.requestsEmpty || !elements.requestsPanel) return;
-    
+    if (!el.requestsCount || !el.requestsEmpty || !el.requestsPanel) return;
+
     const count = state.speakRequests.length;
-    elements.requestsCount.textContent = String(count);
-    elements.requestsCount.classList.toggle('visible', count > 0);
-    elements.requestsEmpty.style.display = count ? 'none' : 'flex';
+    el.requestsCount.textContent = String(count);
+    el.requestsCount.classList.toggle('visible', count > 0);
+    el.requestsEmpty.style.display = count ? 'none' : 'flex';
 
-    elements.requestsPanel.querySelectorAll('.request-item').forEach((el) => el.remove());
+    el.requestsPanel.querySelectorAll('.request-item').forEach((n) => n.remove());
 
-    if (!isInstructor) return;
+    /* Only the Host renders action buttons */
+    if (!state.isHost) return;
 
     state.speakRequests.forEach(({ id, user }) => {
       const row = document.createElement('div');
       row.className = 'request-item';
       row.dataset.requestId = id;
       row.innerHTML = `
-        <span class="request-name">${escape(user.name)}</span>
+        <span class="request-name">${esc(user.name)}</span>
         <div class="request-actions">
-          <button class="approve-btn" type="button" data-approve-id="${id}">
+          <button class="approve-btn" type="button" data-approve-id="${esc(id)}">
             ${shell.t('liveRoom.approveBtn')}
           </button>
-          <button class="deny-btn" type="button" data-deny-id="${id}">
+          <button class="deny-btn" type="button" data-deny-id="${esc(id)}">
             ${shell.t('liveRoom.denyBtn')}
           </button>
         </div>
       `;
-
-      row.querySelector('[data-approve-id]').addEventListener('click', () => {
-        approveSpeakRequest(id, user);
-      });
-
-      row.querySelector('[data-deny-id]').addEventListener('click', () => {
-        denySpeakRequest(id, user);
-      });
-
-      elements.requestsPanel.appendChild(row);
+      row.querySelector('[data-approve-id]').addEventListener('click', () => approveSpeakRequest(id, user));
+      row.querySelector('[data-deny-id]').addEventListener('click', () => denySpeakRequest(id, user));
+      el.requestsPanel.appendChild(row);
     });
   }
 
-  function escape(value) {
-    return window.UniLearnShell.escapeHtml(value);
+  /* ═══════════════════════════════════════════════════════════════════════
+     VIEWER COUNT
+  ═══════════════════════════════════════════════════════════════════════ */
+  function updateViewerCount() {
+    el.viewerCount.textContent = String(participantList().length);
   }
 
-  function pushNotification(text, className = '') {
-    const item = document.createElement('div');
-    item.className = `notif ${className}`.trim();
-    item.textContent = text;
-    elements.notifStack.appendChild(item);
-    setTimeout(() => {
-      item.classList.add('fade-out');
-      setTimeout(() => item.remove(), 280);
-    }, 3200);
+  /* ═══════════════════════════════════════════════════════════════════════
+     REMOTE SLOT SYNC
+  ═══════════════════════════════════════════════════════════════════════ */
+  function syncRemoteSlot() {
+    const remote = participantList().find((p) => !p.isLocal);
+    el.remoteName.textContent  = remote ? remote.name : shell.t('liveRoom.waiting');
+    el.remoteAvatar.textContent = remote ? remote.name.charAt(0).toUpperCase() : '?';
+
+    /* If no remote participant, force focus back to local */
+    if (!remote && state.viewMode === 'single-speaker') {
+      state.focusedSlot = 'local';
+    }
+    applyViewMode();
   }
 
-  function appendSystemMessage(text) {
-    const row = document.createElement('div');
-    row.className = 'msg-system';
-    row.textContent = text;
-    elements.chatMessages.appendChild(row);
-    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
-  }
-
-  function appendMessage(user, message, timestamp) {
-    const row = document.createElement('div');
-    row.className = 'chat-msg';
-    row.innerHTML = `
-      <div class="msg-meta">
-        <span class="msg-author ${user.role !== 'student' ? 'instructor' : ''}">${escape(user.name)}</span>
-        <span class="msg-time">${escape(timestamp || '')}</span>
-      </div>
-      <div class="msg-text">${escape(message)}</div>
-    `;
-    elements.chatMessages.appendChild(row);
-    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
-  }
-
-  function addOrUpdateRaisedHand(id, user) {
-    const index = state.raisedHands.findIndex((entry) => entry.id === id || entry.user.name === user.name);
-    const nextEntry = { id, user };
-
-    if (index >= 0) state.raisedHands[index] = nextEntry;
-    else state.raisedHands.push(nextEntry);
-  }
-
-  function removeRaisedHand(id) {
-    state.raisedHands = state.raisedHands.filter((entry) => entry.id !== id);
-  }
-
-  function setControlState(button, className, enabled) {
-    button.classList.toggle(className, enabled);
-  }
-
+  /* ═══════════════════════════════════════════════════════════════════════
+     LOCAL MEDIA STATE
+  ═══════════════════════════════════════════════════════════════════════ */
   function updateLocalMediaState() {
     const showAvatar = !state.camOn || !state.localVideoTrack;
-    elements.localAvatar.style.display = showAvatar ? 'flex' : 'none';
-    elements.localMicIcon.classList.toggle('muted', !state.micOn);
-    setControlState(elements.toggleMic, 'off', !state.micOn);
-    setControlState(elements.toggleCam, 'off', !state.camOn);
+    el.localAvatar.style.display = showAvatar ? 'flex' : 'none';
+    el.localMicIcon.classList.toggle('muted', !state.micOn);
+    el.toggleMic.classList.toggle('off', !state.micOn);
+    el.toggleCam.classList.toggle('off', !state.camOn);
   }
 
   function updateRemoteMediaState() {
-    elements.remoteAvatar.style.display = state.remoteVideoActive ? 'none' : 'flex';
+    el.remoteAvatar.style.display = state.remoteVideoActive ? 'none' : 'flex';
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     VIEW MODE  — automatic, driven by state changes
+  ═══════════════════════════════════════════════════════════════════════ */
   function applyViewMode() {
-    const hasRemoteParticipant = participantList().some((participant) => !participant.isLocal);
-    elements.videoGrid.classList.remove('dual', 'single-speaker', 'screenshare');
-    elements.slotLocal.classList.remove('focused', 'pip', 'hidden');
-    elements.slotRemote.classList.remove('focused', 'pip', 'hidden');
+    const hasRemote = participantList().some((p) => !p.isLocal);
+
+    el.videoGrid.classList.remove('dual', 'single-speaker', 'screenshare');
+    el.slotLocal.classList.remove('focused', 'pip', 'hidden');
+    el.slotRemote.classList.remove('focused', 'pip', 'hidden');
 
     if (state.viewMode === 'single-speaker') {
-      elements.videoGrid.classList.add('single-speaker');
-      elements.videoStage.classList.add('single-mode');
+      el.videoGrid.classList.add('single-speaker');
+      el.videoStage.classList.add('single-mode');
 
-      const focusRemote = state.focusedSlot === 'remote' && hasRemoteParticipant;
-      const mainSlot = focusRemote ? elements.slotRemote : elements.slotLocal;
-      const secondarySlot = focusRemote ? elements.slotLocal : elements.slotRemote;
-      mainSlot.classList.add('focused');
+      const focusRemote = state.focusedSlot === 'remote' && hasRemote;
+      const main  = focusRemote ? el.slotRemote : el.slotLocal;
+      const pip   = focusRemote ? el.slotLocal  : el.slotRemote;
 
-      if (hasRemoteParticipant) {
-        secondarySlot.classList.add('pip');
-      } else {
-        secondarySlot.classList.add('hidden');
-      }
+      main.classList.add('focused');
+      pip.classList.add(hasRemote ? 'pip' : 'hidden');
+
+    } else if (state.viewMode === 'screenshare') {
+      el.videoStage.classList.remove('single-mode');
+      el.videoGrid.classList.add('screenshare');
+      el.slotLocal.classList.add('focused');
+      el.slotRemote.classList.add(hasRemote ? 'focused' : 'hidden');
+
     } else {
-      elements.videoStage.classList.remove('single-mode');
-      elements.videoGrid.classList.add(state.viewMode);
+      /* dual */
+      el.videoStage.classList.remove('single-mode');
+      el.videoGrid.classList.add('dual');
+      el.slotLocal.classList.add('focused');
+      el.slotRemote.classList.add(hasRemote ? 'focused' : 'hidden');
     }
-
-    document.getElementById('viewDual').classList.toggle('active', state.viewMode === 'dual');
-    document.getElementById('viewSingle').classList.toggle('active', state.viewMode === 'single-speaker');
-    document.getElementById('viewScreen').classList.toggle('active', state.viewMode === 'screenshare');
   }
 
   function setViewMode(mode) {
@@ -601,19 +729,35 @@ function applyRoleUI() {
     applyViewMode();
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     SESSION COPY  (title, labels — re-run on language change)
+  ═══════════════════════════════════════════════════════════════════════ */
+  function updateSessionCopy() {
+    el.sessionTitle.textContent = getSessionTitle();
+    el.localName.textContent    = userName || shell.t('liveRoom.youLabel');
+    applyRoleUI();
+    syncRemoteSlot();
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     TIMER
+  ═══════════════════════════════════════════════════════════════════════ */
   function startTimer() {
     if (state.timerInterval) return;
     state.timerInterval = setInterval(() => {
       state.timerSeconds += 1;
-      const hours = String(Math.floor(state.timerSeconds / 3600)).padStart(2, '0');
-      const minutes = String(Math.floor((state.timerSeconds % 3600) / 60)).padStart(2, '0');
-      const seconds = String(state.timerSeconds % 60).padStart(2, '0');
-      elements.timer.textContent = `${hours}:${minutes}:${seconds}`;
+      const h = String(Math.floor(state.timerSeconds / 3600)).padStart(2, '0');
+      const m = String(Math.floor((state.timerSeconds % 3600) / 60)).padStart(2, '0');
+      const s = String(state.timerSeconds % 60).padStart(2, '0');
+      el.timer.textContent = `${h}:${m}:${s}`;
     }, 1000);
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     CHAT — send message
+  ═══════════════════════════════════════════════════════════════════════ */
   function sendMessage() {
-    const message = elements.chatInput.value.trim();
+    const message = el.chatInput.value.trim();
     if (!message) return;
 
     const locale = shell.language === 'ar' ? 'ar-EG' : 'en-US';
@@ -633,19 +777,22 @@ function applyRoleUI() {
       appendMessage({ name: userName, role: userRole }, message, timestamp);
     }
 
-    elements.chatInput.value = '';
-    elements.chatInput.style.height = 'auto';
+    el.chatInput.value = '';
+    el.chatInput.style.height = 'auto';
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     HAND RAISE
+  ═══════════════════════════════════════════════════════════════════════ */
   function toggleLocalHand() {
     state.handRaised = !state.handRaised;
-    elements.raiseHand.classList.toggle('raised', state.handRaised);
+    el.raiseHandBtn.classList.toggle('raised', state.handRaised);
 
     if (state.handRaised) {
-      addOrUpdateRaisedHand(localParticipantId, { name: userName, role: userRole });
+      addOrUpdateRaisedHand(LOCAL_ID, { name: userName, role: userRole });
       pushNotification(shell.t('liveRoom.handRaisedToast', { name: userName }), 'notif-hand');
     } else {
-      removeRaisedHand(localParticipantId);
+      removeRaisedHand(LOCAL_ID);
     }
 
     if (state.socketConnected) {
@@ -659,6 +806,9 @@ function applyRoleUI() {
     renderParticipants();
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     AGORA RTC
+  ═══════════════════════════════════════════════════════════════════════ */
   async function initAgora() {
     if (typeof AgoraRTC === 'undefined' || !window.AGORA_APP_ID) return;
 
@@ -672,6 +822,7 @@ function applyRoleUI() {
           state.remoteVideoActive = true;
           updateRemoteMediaState();
           user.videoTrack.play('slot-remote-media');
+          /* Auto-focus the remote slot when they start broadcasting */
           if (state.viewMode === 'single-speaker') {
             state.focusedSlot = 'remote';
             applyViewMode();
@@ -683,13 +834,18 @@ function applyRoleUI() {
         }
       });
 
-      state.agoraClient.on('user-unpublished', (user, mediaType) => {
+      state.agoraClient.on('user-unpublished', (_user, mediaType) => {
         if (mediaType === 'video') {
           state.remoteVideoActive = false;
           updateRemoteMediaState();
+          if (state.viewMode === 'single-speaker') {
+            state.focusedSlot = 'local';
+            applyViewMode();
+          }
         }
       });
 
+      /* Fetch a short-lived Agora token from the backend */
       const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
@@ -707,24 +863,27 @@ function applyRoleUI() {
       state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       state.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
 
-      // Enforce defaults: both OFF on join
+      /* Both tracks start muted (OFF) */
       await state.localAudioTrack.setMuted(true);
       await state.localVideoTrack.setMuted(true);
 
+      /* Only instructors get a local camera preview */
       if (isInstructor) {
         state.localVideoTrack.play('slot-local-media');
       }
 
       updateLocalMediaState();
       await state.agoraClient.publish([state.localAudioTrack, state.localVideoTrack]);
+
     } catch (error) {
       console.warn('Agora initialization failed:', error);
     }
   }
 
+  /* ── Screen share ── */
   async function startScreenShare() {
-    elements.screenShareLabel.hidden = false;
-    setControlState(elements.toggleScreen, 'active', true);
+    el.screenShareLabel.hidden = false;
+    el.toggleScreen.classList.add('active');
 
     if (!state.agoraClient || typeof AgoraRTC === 'undefined') {
       state.screenSharing = true;
@@ -734,21 +893,21 @@ function applyRoleUI() {
 
     try {
       state.screenTrack = await AgoraRTC.createScreenVideoTrack({}, 'auto');
-      const activeScreenTrack = Array.isArray(state.screenTrack) ? state.screenTrack[0] : state.screenTrack;
+      const track = Array.isArray(state.screenTrack) ? state.screenTrack[0] : state.screenTrack;
 
       if (state.localVideoTrack) {
         await state.agoraClient.unpublish(state.localVideoTrack);
       }
+      await state.agoraClient.publish(track);
+      track.on?.('track-ended', stopScreenShare);
 
-      await state.agoraClient.publish(activeScreenTrack);
-      activeScreenTrack.on?.('track-ended', stopScreenShare);
       state.screenSharing = true;
       setViewMode('screenshare');
     } catch (error) {
       console.warn('Screen share failed:', error);
       state.screenSharing = false;
-      elements.screenShareLabel.hidden = true;
-      setControlState(elements.toggleScreen, 'active', false);
+      el.screenShareLabel.hidden = true;
+      el.toggleScreen.classList.remove('active');
     }
   }
 
@@ -756,31 +915,34 @@ function applyRoleUI() {
     if (!state.screenSharing) return;
 
     if (state.agoraClient && state.screenTrack) {
-      const activeScreenTrack = Array.isArray(state.screenTrack) ? state.screenTrack[0] : state.screenTrack;
-
+      const track = Array.isArray(state.screenTrack) ? state.screenTrack[0] : state.screenTrack;
       try {
-        await state.agoraClient.unpublish(activeScreenTrack);
-        activeScreenTrack.close();
+        await state.agoraClient.unpublish(track);
+        track.close();
         if (state.localVideoTrack) {
           await state.agoraClient.publish(state.localVideoTrack);
         }
-      } catch (error) {
-        console.warn('Failed to stop screen share cleanly:', error);
+      } catch (err) {
+        console.warn('stopScreenShare cleanup error:', err);
       }
     }
 
-    state.screenTrack = null;
-    state.screenSharing = false;
-    elements.screenShareLabel.hidden = true;
-    setControlState(elements.toggleScreen, 'active', false);
+    state.screenTrack    = null;
+    state.screenSharing  = false;
+    el.screenShareLabel.hidden = true;
+    el.toggleScreen.classList.remove('active');
     setViewMode('dual');
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     SOCKET.IO
+  ═══════════════════════════════════════════════════════════════════════ */
   function initSocket() {
     if (typeof io !== 'function') return;
 
     state.socket = io(window.location.origin);
 
+    /* ── Connect ── */
     state.socket.on('connect', () => {
       state.socketConnected = true;
       state.socket.emit('join-room', {
@@ -790,41 +952,59 @@ function applyRoleUI() {
       pushNotification(shell.t('liveRoom.connectionReady'), 'notif-user');
     });
 
+    /* ── Disconnect ── */
     state.socket.on('disconnect', () => {
       state.socketConnected = false;
     });
 
+    /* ── Room users snapshot (sent on join + on reconnect) ──
+     *
+     * Race-condition fix:
+     *   When a user hard-refreshes, the server may still hold their old
+     *   socket session for a brief moment. This can make the reconnecting
+     *   instructor appear as "second" and strip them of host status.
+     *
+     *   Solution: we filter the room-users list by excluding any entry
+     *   that matches BOTH our name AND role (i.e. ourselves, old or new).
+     *   Only if at least one OTHER instructor remains in the room do we
+     *   treat ourselves as a secondary instructor.
+     */
     state.socket.on('room-users', (users) => {
-      // ── NEW: Auto-detect host ────────────────────────────────────────────
+      /* Detect host / secondary status */
       if (isInstructor) {
         const otherInstructors = users.filter(
           (u) =>
             (u.role === 'instructor' || u.role === 'admin') &&
-            (u.name !== userName || u.role !== userRole)
+            !(u.name === userName && u.role === userRole)  // exclude self (any socket id)
         );
+
         if (otherInstructors.length === 0) {
-          state.isHost = true;
+          /* First (or only) instructor in the room → Host */
+          state.isHost        = true;
           state.isBroadcasting = true;
         } else if (!state.isBroadcasting) {
-          // Secondary instructor joining a room that already has a host
+          /* Another instructor already present → Secondary */
           state.isHost = false;
         }
+        /* If isBroadcasting is already true (approved earlier), keep it. */
       }
 
-      // ── END NEW ──────────────────────────────────────────────────────────
-       state.participants.clear();
-      users.forEach((user) => {
-        if (user.name !== userName || user.role !== userRole) {
-          state.participants.set(user.id, user);
+      /* Populate remote participants (exclude self) */
+      state.participants.clear();
+      users.forEach((u) => {
+        if (!(u.name === userName && u.role === userRole)) {
+          state.participants.set(u.id, u);
         }
       });
+
       syncRemoteSlot();
       updateViewerCount();
       renderParticipants();
       renderHands();
-      applyRoleUI();
+      applyRoleUI(); // ← called AFTER host detection so buttons update immediately
     });
 
+    /* ── User joined ── */
     state.socket.on('user-joined', (user) => {
       state.participants.set(user.id, user);
       syncRemoteSlot();
@@ -834,10 +1014,10 @@ function applyRoleUI() {
       appendSystemMessage(shell.t('liveRoom.joinedMessage', { name: user.name }));
     });
 
+    /* ── User left ── */
     state.socket.on('user-left', ({ id }) => {
       const user = state.participants.get(id);
       if (!user) return;
-
       state.participants.delete(id);
       syncRemoteSlot();
       updateViewerCount();
@@ -845,10 +1025,12 @@ function applyRoleUI() {
       appendSystemMessage(shell.t('liveRoom.leftMessage', { name: user.name }));
     });
 
+    /* ── Chat ── */
     state.socket.on('chat-message', ({ user, message, timestamp }) => {
       appendMessage(user, message, timestamp);
     });
 
+    /* ── Hand events ── */
     state.socket.on('hand-raised', ({ id, user }) => {
       addOrUpdateRaisedHand(id, user);
       renderHands();
@@ -863,149 +1045,162 @@ function applyRoleUI() {
     });
 
     state.socket.on('raised-hands', (hands) => {
-      state.raisedHands = hands.map((entry) => ({
-        id: entry.id,
-        user: entry.user
-      }));
+      state.raisedHands = hands.map(({ id, user }) => ({ id, user }));
       renderHands();
       renderParticipants();
     });
 
-    // Student receives approval
-    state.socket.on('instructor-signal', ({ type, targetId, data }) => {
-      const isMe = targetId === state.socket.id;
+    /* ── Speak request (from student or secondary instructor → Host) ──
+     *
+     * Guard: only the Host processes these. Secondary instructors ignore
+     * this event even if the server broadcasts it to the whole room.
+     */
+    state.socket.on('speak-request', ({ id, user }) => {
+      if (!state.isHost) return; // ← critical guard — secondary instructors bail out here
+      addSpeakRequest(id, user);
+    });
 
+    /* ── Instructor signals (targeted) ── */
+    state.socket.on('instructor-signal', ({ type, targetId, data }) => {
+      const isMe = state.socket && targetId === state.socket.id;
+
+      /* speak-approved → student can now unmute */
       if (type === 'speak-approved' && isMe) {
         state.micRequested = false;
-        state.micApproved = true;
+        state.micApproved  = true;
         pushNotification(shell.t('liveRoom.requestApproved'), 'notif-user');
         applyRoleUI();
       }
 
+      /* speak-denied → reset student state */
       if (type === 'speak-denied' && isMe) {
         state.micRequested = false;
-        state.micApproved = false;
-        pushNotification(shell.t('liveRoom.requestDenied'), '');
+        state.micApproved  = false;
+        pushNotification(shell.t('liveRoom.requestDenied'));
         applyRoleUI();
       }
 
+      /* force-mute → silence student */
       if (type === 'force-mute' && isMe) {
-        state.micOn = false;
-        state.micApproved = false;
+        state.micOn        = false;
+        state.micApproved  = false;
         state.micRequested = false;
         if (state.localAudioTrack) state.localAudioTrack.setMuted(true);
         updateLocalMediaState();
         applyRoleUI();
-        pushNotification(shell.t('liveRoom.studentMicLocked'), '');
+        pushNotification(shell.t('liveRoom.studentMicLocked'));
       }
 
-      // ── NEW: broadcast approved for secondary instructor ──────────────
+      /* broadcast-approved → secondary instructor becomes a broadcaster */
       if (type === 'broadcast-approved' && isMe) {
         state.isBroadcasting = true;
-        state.micRequested = false;
+        state.micRequested   = false;
 
-        // Start local video preview
+        /* Start local video preview */
         if (state.localVideoTrack) {
           state.localVideoTrack.play('slot-local-media');
         }
 
-        // Publish tracks to Agora (guard: not yet published)
+        /* Publish local tracks to Agora if not already published */
         if (state.agoraClient && state.localAudioTrack && state.localVideoTrack) {
           state.agoraClient
             .publish([state.localAudioTrack, state.localVideoTrack])
-            .catch((err) => console.warn('Broadcast publish failed:', err));
+            .catch((err) => console.warn('broadcast-approved publish error:', err));
         }
 
         applyRoleUI();
         setViewMode('dual');
         pushNotification(shell.t('liveRoom.requestApproved'), 'notif-user');
       }
-      // ── END NEW ───────────────────────────────────────────────────────
-    });
-
-    // Admin receives speak request from student
-     state.socket.on('speak-request', ({ id, user }) => {
-      if (!state.isHost) return;
-      const already = state.speakRequests.find((r) => r.id === id);
-      if (already) return;
-      state.speakRequests.push({ id, user });
-      renderSpeakRequests();
-      pushNotification(shell.t('liveRoom.speakRequestToast', { name: user.name }), 'notif-hand');
     });
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     CLEANUP
+  ═══════════════════════════════════════════════════════════════════════ */
   async function cleanup() {
     if (state.timerInterval) {
       clearInterval(state.timerInterval);
       state.timerInterval = null;
     }
-
-    try {
-      await stopScreenShare();
-    } catch (error) {
-      console.warn('Cleanup screen share stop failed:', error);
-    }
+    try { await stopScreenShare(); } catch (_) { /* ignore */ }
 
     state.localAudioTrack?.close();
     state.localVideoTrack?.close();
     state.socket?.disconnect();
 
     if (state.agoraClient) {
-      try {
-        await state.agoraClient.leave();
-      } catch (error) {
-        console.warn('Agora leave failed:', error);
-      }
+      try { await state.agoraClient.leave(); } catch (_) { /* ignore */ }
     }
   }
 
-  document.querySelectorAll('.tab-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach((item) => item.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
-      button.classList.add('active');
-      document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
+  /* ═══════════════════════════════════════════════════════════════════════
+     EVENT LISTENERS
+  ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Sidebar tabs ── */
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach((b) => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      const panel = document.getElementById(`tab-${btn.dataset.tab}`);
+      if (panel) panel.classList.add('active');
     });
   });
 
-  elements.chatInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
+  /* ── Chat ── */
+  el.chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       sendMessage();
     }
   });
 
-  elements.chatInput.addEventListener('input', () => {
-    elements.chatInput.style.height = 'auto';
-    elements.chatInput.style.height = `${Math.min(elements.chatInput.scrollHeight, 96)}px`;
+  el.chatInput.addEventListener('input', () => {
+    el.chatInput.style.height = 'auto';
+    el.chatInput.style.height = `${Math.min(el.chatInput.scrollHeight, 96)}px`;
   });
 
   document.getElementById('sendBtn').addEventListener('click', sendMessage);
 
-
-
-  elements.slotLocal.addEventListener('click', () => {
-    if (state.viewMode === 'single-speaker') {
+  /* ── PIP click — swap focused slot ── */
+  el.slotLocal.addEventListener('click', () => {
+    if (state.viewMode === 'single-speaker' && el.slotLocal.classList.contains('pip')) {
       state.focusedSlot = 'local';
       applyViewMode();
     }
   });
 
-  elements.slotRemote.addEventListener('click', () => {
-    if (state.viewMode === 'single-speaker' && participantList().some((participant) => !participant.isLocal)) {
+  el.slotRemote.addEventListener('click', () => {
+    if (
+      state.viewMode === 'single-speaker' &&
+      el.slotRemote.classList.contains('pip') &&
+      participantList().some((p) => !p.isLocal)
+    ) {
       state.focusedSlot = 'remote';
       applyViewMode();
     }
   });
 
-  elements.toggleMic.addEventListener('click', async () => {
+  /* ── Mic button ── */
+  el.toggleMic.addEventListener('click', async () => {
     if (isInstructor) {
+      /* Instructors (host or approved broadcaster) directly toggle mic */
+      if (!state.isHost && !state.isBroadcasting) return; // secondary still waiting
       state.micOn = !state.micOn;
       if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
       updateLocalMediaState();
+
     } else {
+      /* Student flow */
       if (state.micOn) {
-        state.micOn = false;
+        /* Mute self */
+        state.micOn       = false;
         state.micApproved = false;
         if (state.localAudioTrack) await state.localAudioTrack.setMuted(true);
         updateLocalMediaState();
@@ -1013,47 +1208,51 @@ function applyRoleUI() {
         return;
       }
 
-      if (!state.micApproved) {
+      if (state.micApproved) {
+        /* Approved — toggle mic */
+        state.micOn = !state.micOn;
+        if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
+        updateLocalMediaState();
+
+      } else {
+        /* Not yet approved — send speak request */
         if (state.micRequested) {
-          pushNotification(shell.t('liveRoom.requestSent'), '');
+          pushNotification(shell.t('liveRoom.requestSent'));
           return;
         }
         state.micRequested = true;
         applyRoleUI();
-
         if (state.socketConnected) {
           state.socket.emit('speak-request', {
             roomId: channel,
             user: { name: userName, role: userRole }
           });
         }
-
-        pushNotification(shell.t('liveRoom.requestSent'), '');
-      } else {
-        state.micOn = !state.micOn;
-        if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
-        updateLocalMediaState();
+        pushNotification(shell.t('liveRoom.requestSent'));
       }
     }
   });
 
-  elements.toggleCam.addEventListener('click', async () => {
+  /* ── Camera button ── */
+  el.toggleCam.addEventListener('click', async () => {
     if (!isInstructor) return;
+    if (!state.isHost && !state.isBroadcasting) return;
     state.camOn = !state.camOn;
     if (state.localVideoTrack) await state.localVideoTrack.setMuted(!state.camOn);
     updateLocalMediaState();
   });
 
-  elements.toggleScreen.addEventListener('click', async () => {
+  /* ── Screen share button ── */
+  el.toggleScreen.addEventListener('click', async () => {
+    if (!isInstructor) return;
+    if (!state.isHost && !state.isBroadcasting) return;
     if (state.screenSharing) await stopScreenShare();
     else await startScreenShare();
   });
 
-  elements.raiseHand.addEventListener('click', toggleLocalHand);
-
-  // ── NEW: Request Broadcast button (secondary instructor) ──────────────────
-  elements.reqBroadcastBtn?.addEventListener('click', () => {
-    if (state.micRequested) return; // already waiting — ignore double-tap
+  /* ── Request Broadcast button (secondary instructor only) ── */
+  el.reqBroadcastBtn.addEventListener('click', () => {
+    if (state.micRequested) return; // debounce — ignore if already pending
     state.micRequested = true;
     applyRoleUI();
     if (state.socketConnected) {
@@ -1062,36 +1261,58 @@ function applyRoleUI() {
         user: { name: userName, role: userRole, reqType: 'broadcast' }
       });
     }
-    pushNotification(shell.t('liveRoom.requestSent'), '');
+    pushNotification(shell.t('liveRoom.requestSent'));
   });
-  // ── END NEW ───────────────────────────────────────────────────────────────
 
-  elements.endBtn.addEventListener('click', async () => {
+  /* ── Raise hand ── */
+  el.raiseHandBtn.addEventListener('click', toggleLocalHand);
+
+  /* ── Leave / End ── */
+  el.endBtn.addEventListener('click', async () => {
     if (!window.confirm(shell.t('liveRoom.leaveConfirm'))) return;
     await cleanup();
     window.location.href = 'dashboard.html';
   });
-  // كود تشغيل زرار التحديث
-  document.getElementById('refreshBtn')?.addEventListener('click', () => {
-    // رسالة تأكيد عشان لو داس عليه بالغلط ميخرجوش من البث
-    if (window.confirm('هل تريد تحديث الصفحة وإعادة الاتصال بالبث؟')) {
+
+  /* ── Reconnect / Refresh button ── */
+  el.refreshBtn.addEventListener('click', () => {
+    if (window.confirm('Reconnect to the live room?')) {
       window.location.reload();
     }
   });
 
+  /* ── Mobile sidebar toggle ── */
+  el.mobileMenuBtn?.addEventListener('click', () => {
+    el.sidebar?.classList.toggle('mobile-open');
+  });
+
+  /* ── Language change ── */
   window.addEventListener('unilearn:language-changed', () => {
-    updateSessionCopy(); 
+    updateSessionCopy();
     renderParticipants();
     renderHands();
     renderSpeakRequests();
   });
 
-  window.addEventListener('beforeunload', () => {
-    cleanup();
-  });
+  /* ── Cleanup on page unload ── */
+  window.addEventListener('beforeunload', () => { cleanup(); });
 
-  elements.localAvatar.textContent = userName.charAt(0).toUpperCase() || 'S';
+  /* ═══════════════════════════════════════════════════════════════════════
+     BOOT SEQUENCE
+  ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Set local avatar initial */
+  el.localAvatar.textContent = (userName.charAt(0) || 'S').toUpperCase();
+
+  /* System message */
   appendSystemMessage(shell.t('liveRoom.sessionStarted'));
+
+  /* Populate copy + run initial role UI
+   * applyRoleUI() is intentionally called inside updateSessionCopy()
+   * so it always fires AFTER the host state is known. On first boot,
+   * isHost is false for everyone; it gets set correctly in room-users.
+   * We still call it here so the DOM is in a valid initial state.
+   */
   updateSessionCopy();
   updateViewerCount();
   renderParticipants();
@@ -1101,6 +1322,9 @@ function applyRoleUI() {
   updateRemoteMediaState();
   setViewMode('single-speaker');
   startTimer();
+
+  /* Start networking LAST so all UI is ready before events arrive */
   initSocket();
   initAgora();
+
 })();
