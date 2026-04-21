@@ -1,24 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 :root {
-  --bg-void:        #080c10;
-  --bg-panel:       #0d1117;
-  --bg-surface:     #131920;
-  --bg-raised:      #1a2330;
-  --border:         #1e2d3d;
-  --border-bright:  #2a3f55;
+  --bg-void:          #080c10;
+  --bg-panel:         #0d1117;
+  --bg-surface:       #131920;
+  --bg-raised:        #1a2330;
+  --border:           #1e2d3d;
+  --border-bright:    #2a3f55;
   --accent-primary:   #00d4ff;
   --accent-secondary: #00ff9d;
   --accent-hand:      #ffd60a;
-  --text-primary:   #e8f4f8;
-  --text-secondary: #7a9bb5;
-  --text-muted:     #3d5a73;
-  --live-red:       #ff3b3b;
-  --shadow-glow:    0 0 30px rgba(0, 212, 255, 0.12);
-  --shadow-panel:   0 6px 28px rgba(0, 0, 0, 0.55);
-  --radius:         8px;
-  --radius-lg:      14px;
-  --topbar-height:  60px;
+  --text-primary:     #e8f4f8;
+  --text-secondary:   #7a9bb5;
+  --text-muted:       #3d5a73;
+  --live-red:         #ff3b3b;
+  --shadow-glow:      0 0 30px rgba(0, 212, 255, 0.12);
+  --shadow-panel:     0 6px 28px rgba(0, 0, 0, 0.55);
+  --radius:           8px;
+  --radius-lg:        14px;
+  --topbar-height:    60px;
   --mono:    'JetBrains Mono', monospace;
   --display: 'Syne', sans-serif;
 }
@@ -27,11 +27,16 @@
 
 html { font-size: 13px; }
 
+/* Fix #5 — body is exactly the viewport, no overflow */
+html, body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 body {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background: var(--bg-void);
   color: var(--text-primary);
   font-family: var(--mono);
@@ -41,11 +46,11 @@ button, textarea { font: inherit; }
 
 /* ────────────────────────────────────────────
    TOPBAR
-   Hamburger is first in DOM = far-left (LTR).
-   RTL reverses the row so it ends up far-right.
 ──────────────────────────────────────────── */
 .topbar {
   height: var(--topbar-height);
+  min-height: var(--topbar-height);
+  flex-shrink: 0;               /* never shrinks — Fix #5 */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -54,10 +59,8 @@ button, textarea { font: inherit; }
   background: var(--bg-panel);
   position: relative;
   z-index: 10;
-  flex-shrink: 0;
 }
 
-/* RTL: reverse the entire row → hamburger goes to far-right */
 html[dir='rtl'] .topbar { flex-direction: row-reverse; }
 
 .topbar-brand {
@@ -79,11 +82,10 @@ html[dir='rtl'] .topbar-brand { flex-direction: row-reverse; }
 
 html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
 
-/* ── Mobile hamburger ── */
 .mobile-menu-btn {
   width: 38px;
   height: 38px;
-  display: none;          /* shown in @media below */
+  display: none;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -103,7 +105,6 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   outline: none;
 }
 
-/* ── Logo / badge / title ── */
 .logo-mark {
   color: var(--accent-primary);
   font-family: var(--display);
@@ -152,7 +153,6 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   font-weight: 700;
 }
 
-/* ── Refresh button ── */
 .refresh-btn {
   width: 34px;
   height: 34px;
@@ -165,18 +165,17 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   background: var(--bg-surface);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: border-color 0.18s, color 0.18s, transform 0.18s;
+  transition: border-color 0.18s, color 0.18s, transform 0.4s;
 }
 
 .refresh-btn:hover,
 .refresh-btn:focus-visible {
   border-color: var(--accent-primary);
   color: var(--accent-primary);
-  transform: rotate(45deg);
+  transform: rotate(180deg);
   outline: none;
 }
 
-/* ── Viewer count / timer ── */
 .viewer-count {
   display: inline-flex;
   align-items: center;
@@ -202,93 +201,57 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
 }
 
 /* ────────────────────────────────────────────
-   ROOM LAYOUT
+   ROOM LAYOUT  — Fix #5
+   Body is 100dvh flex-col.
+   .room-layout gets the remaining height via flex:1
+   and uses grid rows so the control bar is always visible.
 ──────────────────────────────────────────── */
 .room-layout {
-  flex: 1;
-  min-height: 0;
+  flex: 1;                        /* fill everything below the topbar */
+  min-height: 0;                  /* critical: allows grid children to shrink */
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto; /* video row grows, control bar is auto */
+  overflow: hidden;
 }
 
 /* ────────────────────────────────────────────
-   VIDEO STAGE
+   VIDEO STAGE  — Fix #2 + Fix #5
 ──────────────────────────────────────────── */
 .video-stage {
   position: relative;
-  overflow: hidden;
+  overflow: hidden;               /* Fix #5: never pushes control bar down */
+  min-height: 0;                  /* Fix #5 */
   background: #000;
   grid-column: 1;
   grid-row: 1;
 }
 
+/* ── VIDEO GRID — Fix #2 ──
+   Default: single video fills 100% of the stage.
+   When two slots are visible (both display != none),
+   the CSS switches to a 2-column split via .has-remote.
+──────────────────────────────────────────── */
 .video-grid {
   width: 100%;
   height: 100%;
-  display: grid;
-  gap: 2px;
-  background: var(--bg-void);
+  display: flex;              /* flex instead of grid for single-fill behaviour */
 }
 
-/* Dual split */
-.video-grid.dual {
+/* Single slot: fills entire stage */
+.video-grid .video-slot {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Two active slots: side-by-side */
+.video-grid.has-remote {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* Screenshare main + pip column */
-.video-grid.screenshare {
-  grid-template-columns: minmax(0, 3fr) minmax(200px, 1fr);
-}
-
-/* ── Single-speaker (default) ──
-   All slots are absolutely positioned.
-   .focused → fills entire stage.
-   .pip     → small overlay (only shown if remote IS publishing).
-   .hidden  → display:none (empty passive listeners never show).
-──────────────────────────────── */
-.video-grid.single-speaker {
-  position: relative;
-  display: block;
-}
-
-.video-grid.single-speaker .video-slot {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-.video-grid.single-speaker .video-slot.focused {
-  opacity: 1;
-  pointer-events: auto;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
-.video-grid.single-speaker .video-slot.pip {
-  width:  min(240px, 32vw);
-  height: min(150px, 20vw);
-  inset: auto 16px 72px auto;   /* 72px up from bottom clears the control bar gap */
-  border: 1px solid var(--border-bright);
-  border-radius: 14px;
-  box-shadow: var(--shadow-panel);
-  opacity: 1;
-  pointer-events: auto;
-  z-index: 3;
-}
-
-/* Empty slots for passive listeners: never shown */
-.video-slot.hidden,
-.video-grid.single-speaker .video-slot.hidden {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* ── Video slot base ── */
+/* ── Video slot ── */
 .video-slot {
   position: relative;
   overflow: hidden;
@@ -298,11 +261,10 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   justify-content: center;
 }
 
-/* ── Media layer — landscape-friendly ──
-   object-fit: cover fills the slot without letterboxing.
-   The camera track itself is 16:9 so there is no distortion
-   when the slot is also roughly 16:9.
-──────────────────────────────────────── */
+/* Fix #4 — slots with no rendered content are invisible */
+.video-slot:empty { display: none !important; }
+
+/* ── Media layer — landscape, object-fit:cover, no distortion ── */
 .media-layer {
   position: absolute;
   inset: 0;
@@ -315,7 +277,7 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
 .media-layer video {
   width: 100%;
   height: 100%;
-  object-fit: cover;          /* fills slot, no black bars, no distortion */
+  object-fit: cover;
   object-position: center;
 }
 
@@ -382,21 +344,10 @@ html[dir='rtl'] .mic-indicator { right: auto; left: 12px; }
 
 .mic-indicator.muted { color: var(--live-red); }
 
-.video-slot.focused::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px solid rgba(0, 212, 255, 0.4);
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 4;
-}
-
-/* Stage hint — moved up so it clears the Host label badge */
 .stage-hint {
   position: absolute;
   left: 50%;
-  bottom: 65px;             /* was 16px — now clears the slot-label */
+  bottom: 65px;
   transform: translateX(-50%);
   padding: 6px 14px;
   border-radius: 999px;
@@ -409,8 +360,6 @@ html[dir='rtl'] .mic-indicator { right: auto; left: 12px; }
   transition: opacity 0.18s ease;
   z-index: 5;
 }
-
-.video-stage.single-mode .stage-hint { opacity: 1; }
 
 .screenshare-label {
   position: absolute;
@@ -432,7 +381,7 @@ html[dir='rtl'] .mic-indicator { right: auto; left: 12px; }
 .screenshare-label[hidden] { display: none; }
 
 /* ────────────────────────────────────────────
-   SIDEBAR (chat / participants panel)
+   SIDEBAR
 ──────────────────────────────────────────── */
 .sidebar {
   grid-column: 2;
@@ -442,6 +391,7 @@ html[dir='rtl'] .mic-indicator { right: auto; left: 12px; }
   min-height: 0;
   border-left: 1px solid var(--border);
   background: var(--bg-panel);
+  overflow: hidden;
 }
 
 html[dir='rtl'] .sidebar { border-left: 0; border-right: 1px solid var(--border); }
@@ -505,7 +455,6 @@ html[dir='rtl'] .sidebar { border-left: 0; border-right: 1px solid var(--border)
 
 .tab-panel.active { display: flex; }
 
-/* Scrollable inner areas */
 .chat-messages,
 .participants-list,
 .hands-panel,
@@ -549,7 +498,6 @@ html[dir='rtl'] .msg-meta { flex-direction: row-reverse; }
   padding: 2px 0;
 }
 
-/* Chat input */
 .chat-input-area {
   display: flex;
   gap: 8px;
@@ -595,7 +543,6 @@ html[dir='rtl'] .chat-input-area { flex-direction: row-reverse; }
 
 .send-btn:hover { background: #00bfe6; transform: translateY(-1px); }
 
-/* Participants list */
 .participant-item {
   display: flex;
   align-items: center;
@@ -609,7 +556,6 @@ html[dir='rtl'] .chat-input-area { flex-direction: row-reverse; }
 }
 
 .participant-item:hover { border-color: var(--border); background: var(--bg-surface); }
-
 html[dir='rtl'] .participant-item { flex-direction: row-reverse; }
 
 .p-avatar {
@@ -642,16 +588,10 @@ html[dir='rtl'] .participant-item { flex-direction: row-reverse; }
 }
 
 .p-role { color: var(--text-muted); font-size: 10px; margin-top: 1px; }
-
 .p-status { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-/* Hands */
 .hands-panel,
-.requests-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.requests-panel { display: flex; flex-direction: column; gap: 8px; }
 
 .hands-empty {
   display: flex;
@@ -712,7 +652,6 @@ html[dir='rtl'] .hand-queue-item { flex-direction: row-reverse; }
   font-family: var(--mono);
 }
 
-/* Speak requests */
 .request-item {
   display: flex;
   align-items: center;
@@ -768,7 +707,6 @@ html[dir='rtl'] .request-item { flex-direction: row-reverse; }
 
 .deny-btn:hover { background: rgba(255, 59, 59, 0.18); }
 
-/* Force-mute button on participant row (admin only, revealed on hover) */
 .mute-participant-btn {
   padding: 4px 9px;
   border: 1px solid rgba(255, 59, 59, 0.28);
@@ -786,11 +724,13 @@ html[dir='rtl'] .request-item { flex-direction: row-reverse; }
 .mute-participant-btn:hover { background: rgba(255, 59, 59, 0.12); }
 
 /* ────────────────────────────────────────────
-   CONTROL BAR
+   CONTROL BAR — Fix #5
+   grid-row:2 / auto height — always visible at bottom.
 ──────────────────────────────────────────── */
 .control-bar {
   grid-column: 1;
   grid-row: 2;
+  flex-shrink: 0;               /* never shrinks — Fix #5 */
   display: flex;
   align-items: center;
   gap: 10px;
@@ -798,38 +738,10 @@ html[dir='rtl'] .request-item { flex-direction: row-reverse; }
   border-top: 1px solid var(--border);
   background: var(--bg-panel);
   min-height: 58px;
+  overflow: visible;            /* allow quality dropdown to escape upward */
 }
 
 html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
-
-.view-modes {
-  display: flex;
-  gap: 5px;
-  flex-shrink: 0;
-}
-
-.view-mode-btn {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: border-color 0.18s, color 0.18s, background 0.18s;
-}
-
-.view-mode-btn.active {
-  border-color: rgba(0, 212, 255, 0.34);
-  background: rgba(0, 212, 255, 0.1);
-  color: var(--accent-primary);
-}
-
-.view-mode-btn:hover:not(.active) { color: var(--text-secondary); border-color: var(--border-bright); }
 
 .ctrl-btn {
   min-height: 40px;
@@ -849,7 +761,8 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
   transition: transform 0.18s, background 0.18s, border-color 0.18s, color 0.18s;
 }
 
-.ctrl-btn:hover, .ctrl-btn:focus-visible { outline: none; transform: translateY(-1px); }
+.ctrl-btn:hover,
+.ctrl-btn:focus-visible { outline: none; transform: translateY(-1px); }
 
 .ctrl-btn.off {
   border-color: rgba(255, 59, 59, 0.32);
@@ -897,9 +810,10 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
   transition: background 0.18s, transform 0.18s;
 }
 
-.end-btn:hover, .end-btn:focus-visible { background: #e02020; transform: translateY(-1px); outline: none; }
+.end-btn:hover,
+.end-btn:focus-visible { background: #e02020; transform: translateY(-1px); outline: none; }
 
-/* ── Quality selector ── */
+/* ── Quality selector — Fix #3 (z-index above Agora video) ── */
 .quality-wrap {
   position: relative;
   flex-shrink: 0;
@@ -908,25 +822,22 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
 .quality-btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; }
 
 .quality-dropdown {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 110px;
+  position: fixed;             /* Fix #3: fixed breaks out of any stacking context */
+  min-width: 120px;
   display: none;
   flex-direction: column;
   border: 1px solid var(--border-bright);
   border-radius: 12px;
   background: var(--bg-panel);
-  box-shadow: var(--shadow-panel);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.7);
   overflow: hidden;
-  z-index: 50;
+  z-index: 9999 !important;   /* Fix #3: guaranteed above video canvas */
 }
 
 .quality-wrap.open .quality-dropdown { display: flex; }
 
 .quality-opt {
-  padding: 9px 14px;
+  padding: 10px 16px;
   border: 0;
   background: transparent;
   color: var(--text-secondary);
@@ -949,7 +860,7 @@ html[dir='rtl'] .quality-opt { text-align: right; }
   position: fixed;
   top: 70px;
   right: 14px;
-  z-index: 120;
+  z-index: 9000;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -987,10 +898,8 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
 ──────────────────────────────────────────── */
 @media (max-width: 768px) {
 
-  /* Show hamburger */
   .mobile-menu-btn { display: inline-flex; }
 
-  /* Topbar: allow wrapping if needed, keep compact */
   .topbar {
     height: auto;
     min-height: var(--topbar-height);
@@ -1000,10 +909,8 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
   }
 
   .topbar-brand { flex: 1 1 auto; min-width: 0; }
-
   .session-title { font-size: 11px; }
 
-  /* Refresh button: 28×28 on mobile so it never crowds the LIVE badge */
   .refresh-btn {
     width: 28px !important;
     height: 28px !important;
@@ -1011,16 +918,15 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
   }
 
   .viewer-count { font-size: 10px; }
-
   .timer { font-size: 10px; padding: 3px 8px; }
 
-  /* Room layout: single column, no sidebar */
+  /* Fix #5 mobile: room fills remaining height with no overflow */
   .room-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
-  /* Sidebar: hidden by default, slides in as overlay */
+  /* Sidebar hidden by default on mobile */
   .sidebar {
     display: none;
     grid-column: 1;
@@ -1039,23 +945,22 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
 
   html[dir='rtl'] .sidebar.mobile-open { right: auto; left: 0; }
 
-  /* Control bar: horizontal scroll, NO wrapping, NO shrinking */
+  /* Fix #5 mobile control bar: horizontal scroll, no wrap, no shrink */
   .control-bar {
     grid-column: 1;
     grid-row: 2;
     overflow-x: auto;
-    overflow-y: hidden;
-    flex-wrap: nowrap;           /* ← key: never wrap to new line */
+    overflow-y: visible;   /* allow quality dropdown upward */
+    flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     gap: 7px;
     padding: 8px 10px;
     justify-content: flex-start;
+    min-height: 52px;
   }
 
   .control-bar::-webkit-scrollbar { display: none; }
-
-  /* Every direct child must NOT shrink */
   .control-bar > * { flex-shrink: 0; }
 
   .ctrl-btn,
@@ -1070,38 +975,27 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
   .ctrl-btn svg,
   .end-btn svg { width: 14px; height: 14px; }
 
-  .view-mode-btn { width: 28px; height: 28px; }
-
   .ctrl-divider { height: 24px; }
 
-  /* Screen share: ALWAYS hidden on mobile (getDisplayMedia not supported) */
+  /* Screen share always hidden on mobile */
   .hide-mobile { display: none !important; }
 
-  /* PIP smaller on mobile */
-  .video-grid.single-speaker .video-slot.pip {
-    width:  min(130px, 36vw);
-    height: min(82px, 22vw);
-    inset: auto 10px 58px auto;
-  }
-
-  html[dir='rtl'] .video-grid.single-speaker .video-slot.pip {
-    inset: auto auto 58px 10px;
-  }
-
-  /* Dual / screenshare collapse to single column */
-  .video-grid.dual,
-  .video-grid.screenshare { grid-template-columns: 1fr; }
-
-  /* Quality dropdown: anchor right on mobile so it doesn't go off-screen */
+  /* Quality dropdown: anchor to bottom of screen on mobile */
   .quality-dropdown {
-    left: auto;
-    right: 0;
-    transform: none;
+    bottom: 60px;
+    left: 10px !important;
+    right: auto;
+  }
+
+  /* Two-column grid collapses to single column on mobile */
+  .video-grid.has-remote {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 
   .notification-stack {
     top: auto;
-    bottom: 70px;
+    bottom: 62px;
     left: 10px;
     right: 10px;
   }
