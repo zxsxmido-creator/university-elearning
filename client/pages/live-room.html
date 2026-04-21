@@ -5,67 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live Room - UniLearn</title>
   <link rel="stylesheet" href="../css/live-room.css">
-  <!-- Socket.IO client -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
-  <!-- Agora RTC SDK -->
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
 </head>
 <body data-title-key="liveRoom.pageTitle">
 
-  <!-- ═══════════════════════════════════════════
-       TOP BAR
-  ══════════════════════════════════════════════ -->
   <header class="topbar">
     <div class="topbar-left">
-      <!-- Mobile sidebar toggle -->
-      <button
-        class="mobile-menu-btn"
-        id="mobileMenuBtn"
-        type="button"
-        aria-label="Open menu"
-        data-i18n-aria="common.openMenu"
-      >
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
-          <line x1="3"  y1="6"  x2="21" y2="6"></line>
-          <line x1="3"  y1="12" x2="21" y2="12"></line>
-          <line x1="3"  y1="18" x2="21" y2="18"></line>
+      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" data-i18n-aria="common.openMenu">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
       </button>
-
-      <!-- Brand -->
       <span class="logo-mark">U/</span>
-
-      <!-- Live indicator -->
-      <div class="live-badge" aria-live="polite">
-        <span class="dot" aria-hidden="true"></span>
+      <div class="live-badge">
+        <span class="dot"></span>
         <span data-i18n="liveRoom.liveBadge">Live</span>
       </div>
-
-      <!-- Session name (populated by JS) -->
       <span class="session-title" id="sessionTitle">Live Session</span>
     </div>
 
     <div class="topbar-right">
-      <!-- Reconnect / refresh button -->
-      <button
-        class="view-mode-btn"
-        id="refreshBtn"
-        type="button"
-        title="Reconnect"
-        aria-label="Reconnect"
-      >
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
-          <polyline points="23 4 23 10 17 10"></polyline>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-        </svg>
+      <button class="lang-toggle" id="languageToggle" type="button">
+        <span class="lang-option active" data-lang-option="en">EN</span>
+        <span class="lang-separator">/</span>
+        <span class="lang-option" data-lang-option="ar">AR</span>
       </button>
-
-      <!-- Viewer count -->
-      <div class="viewer-count" aria-live="polite">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
+      <div class="viewer-count">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
           <circle cx="9" cy="7" r="4"></circle>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -74,38 +43,25 @@
         <span id="viewerCount">1</span>
         <span data-i18n="liveRoom.watching">watching</span>
       </div>
-
-      <!-- Session timer -->
-      <div class="timer" id="sessionTimer" aria-label="Session duration">00:00:00</div>
+      <div class="timer" id="sessionTimer">00:00:00</div>
     </div>
-  </header><!-- /topbar -->
+  </header>
 
-  <!-- ═══════════════════════════════════════════
-       MAIN ROOM LAYOUT
-  ══════════════════════════════════════════════ -->
   <div class="room-layout">
 
-    <!-- ── Video Stage ── -->
-    <section class="video-stage" id="videoStage" aria-label="Video stage">
+    <section class="video-stage" id="videoStage">
+      <div class="screenshare-label" id="screenShareLabel" hidden data-i18n="liveRoom.screenShareLabel">Screen share</div>
 
-      <!-- Screenshare active indicator -->
-      <div class="screenshare-label" id="screenShareLabel" hidden
-           data-i18n="liveRoom.screenShareLabel">Screen Share</div>
-
-      <!-- Grid — class toggled by JS: single-speaker | dual | screenshare -->
       <div class="video-grid single-speaker" id="videoGrid">
-
-        <!-- Local slot -->
         <article class="video-slot focused" id="slot-local" data-slot="local">
           <div class="media-layer" id="slot-local-media"></div>
-          <div class="avatar-placeholder" id="localAvatar" aria-hidden="true">S</div>
+          <div class="avatar-placeholder" id="localAvatar">S</div>
           <div class="slot-label">
             <span class="slot-role" data-i18n="liveRoom.hostLabel">Host</span>
             <span id="localName">You</span>
           </div>
-          <div class="mic-indicator muted" id="localMicIcon" aria-label="Mic muted">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"
-                 viewBox="0 0 24 24" aria-hidden="true">
+          <div class="mic-indicator" id="localMicIcon">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -113,94 +69,68 @@
           </div>
         </article>
 
-        <!-- Remote slot -->
-        <article class="video-slot hidden" id="slot-remote" data-slot="remote">
+        <article class="video-slot" id="slot-remote" data-slot="remote">
           <div class="media-layer" id="slot-remote-media"></div>
-          <div class="avatar-placeholder" id="remoteAvatar" aria-hidden="true">?</div>
+          <div class="avatar-placeholder" id="remoteAvatar">?</div>
           <div class="slot-label">
             <span class="slot-role" data-i18n="liveRoom.cohostLabel">Co-host</span>
-            <span id="remoteName" data-i18n="liveRoom.waiting">Waiting...</span>
+            <span id="remoteName">Waiting...</span>
           </div>
-          <div class="mic-indicator muted" id="remoteMicIcon" aria-label="Mic muted">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"
-                 viewBox="0 0 24 24" aria-hidden="true">
+          <div class="mic-indicator" id="remoteMicIcon">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <line x1="12" y1="19" x2="12" y2="23"></line>
             </svg>
           </div>
         </article>
+      </div>
 
-      </div><!-- /video-grid -->
-
-      <!-- PIP hint — visible only in single-speaker mode when remote is present -->
-      <p class="stage-hint" id="singleSpeakerHint"
-         data-i18n="liveRoom.singleSpeakerHint">
+      <p class="stage-hint" id="singleSpeakerHint" data-i18n="liveRoom.singleSpeakerHint">
         Tap the mini window to switch the focused speaker.
       </p>
+    </section>
 
-    </section><!-- /video-stage -->
-
-    <!-- ── Sidebar ── -->
     <aside class="sidebar" id="sidebar">
-
-      <!-- Tab navigation -->
-      <div class="sidebar-tabs" role="tablist">
-
-        <button class="tab-btn active" type="button" role="tab"
-                aria-selected="true" data-tab="chat">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-               viewBox="0 0 24 24" aria-hidden="true">
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" type="button" data-tab="chat">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
           </svg>
           <span data-i18n="liveRoom.chatTab">Chat</span>
         </button>
 
-        <button class="tab-btn" type="button" role="tab"
-                aria-selected="false" data-tab="participants">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"
-               viewBox="0 0 24 24" aria-hidden="true">
+        <button class="tab-btn" type="button" data-tab="participants">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
           </svg>
           <span data-i18n="liveRoom.peopleTab">People</span>
         </button>
 
-        <button class="tab-btn" type="button" role="tab"
-                aria-selected="false" data-tab="hands">
+        <button class="tab-btn" type="button" data-tab="hands">
           <span data-i18n="liveRoom.handsTab">Hands</span>
-          <span class="hands-count" id="handsCount" aria-label="raised hands count">0</span>
+          <span class="hands-count" id="handsCount">0</span>
         </button>
 
-        <!--
-          Requests tab — hidden by default;
-          JS shows it only for the Host (isHost === true).
-        -->
-        <button class="tab-btn" type="button" role="tab"
-                aria-selected="false" data-tab="requests"
-                id="requestsTabBtn" style="display:none;">
+        <button class="tab-btn" type="button" data-tab="requests" id="requestsTabBtn" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          </svg>
           <span data-i18n="liveRoom.requestsTab">Requests</span>
-          <span class="hands-count" id="requestsCount" aria-label="speak requests count">0</span>
+          <span class="requests-count" id="requestsCount">0</span>
         </button>
+      </div>
 
-      </div><!-- /sidebar-tabs -->
-
-      <!-- Chat panel -->
-      <div class="tab-panel active" id="tab-chat" role="tabpanel">
-        <div class="chat-messages" id="chatMessages" aria-live="polite" aria-relevant="additions"></div>
+      <div class="tab-panel active" id="tab-chat">
+        <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
-          <textarea
-            class="chat-input"
-            id="chatInput"
-            rows="1"
+          <textarea class="chat-input" id="chatInput" rows="1"
             placeholder="Send a message..."
-            data-i18n-placeholder="liveRoom.messagePlaceholder"
-            aria-label="Chat message"
-          ></textarea>
-          <button class="send-btn" id="sendBtn" type="button"
-                  aria-label="Send message">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
-                 viewBox="0 0 24 24" aria-hidden="true">
+            data-i18n-placeholder="liveRoom.messagePlaceholder"></textarea>
+          <button class="send-btn" id="sendBtn" type="button" aria-label="Send message">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
@@ -208,52 +138,55 @@
         </div>
       </div>
 
-      <!-- Participants panel -->
-      <div class="tab-panel" id="tab-participants" role="tabpanel">
+      <div class="tab-panel" id="tab-participants">
         <div class="participants-list" id="participantsList"></div>
       </div>
 
-      <!-- Raised hands panel -->
-      <div class="tab-panel" id="tab-hands" role="tabpanel">
+      <div class="tab-panel" id="tab-hands">
         <div class="hands-panel" id="handsPanel">
           <div class="hands-empty" id="handsEmpty">
-            <span class="hands-empty-mark" aria-hidden="true">✋</span>
+            <span class="hands-empty-mark">Hand</span>
             <span data-i18n="liveRoom.noRaisedHands">No raised hands</span>
           </div>
         </div>
       </div>
 
-      <!-- Broadcast / speak requests panel (Host only) -->
-      <div class="tab-panel" id="tab-requests" role="tabpanel">
-        <div class="hands-panel" id="requestsPanel">
+      <div class="tab-panel" id="tab-requests">
+        <div class="requests-panel" id="requestsPanel">
           <div class="hands-empty" id="requestsEmpty">
-            <span class="hands-empty-mark" id="requestsEmptyMark" aria-hidden="true">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
-                   viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-              </svg>
-            </span>
+            <span class="hands-empty-mark">MIC</span>
             <span data-i18n="liveRoom.noSpeakRequests">No speak requests</span>
           </div>
         </div>
       </div>
+    </aside>
 
-    </aside><!-- /sidebar -->
+    <div class="control-bar" id="controlBar">
 
-    <!-- ── Control Bar ── -->
-    <div class="control-bar" role="toolbar" aria-label="Room controls">
+      <div class="view-modes">
+        <button class="view-mode-btn active" id="viewSingle" type="button" data-i18n-title="liveRoom.singleViewTitle">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="3" width="20" height="18" rx="1"></rect>
+          </svg>
+        </button>
+        <button class="view-mode-btn" id="viewDual" type="button" data-i18n-title="liveRoom.dualViewTitle">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="3" width="9" height="18" rx="1"></rect>
+            <rect x="13" y="3" width="9" height="18" rx="1"></rect>
+          </svg>
+        </button>
+        <button class="view-mode-btn" id="viewScreen" type="button" data-i18n-title="liveRoom.screenViewTitle">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="3" width="14" height="18" rx="1"></rect>
+            <rect x="18" y="3" width="4" height="18" rx="1"></rect>
+          </svg>
+        </button>
+      </div>
 
-      <!--
-        Mic button
-        • Instructor (host / approved): toggles mic mute
-        • Student: initiates a speak-request flow
-        Starts in .off state (muted) by default.
-      -->
+      <div class="ctrl-divider"></div>
+
       <button class="ctrl-btn off" id="toggleMic" type="button">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
           <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
           <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -261,25 +194,17 @@
         <span id="micBtnLabel" data-i18n="liveRoom.mic">Mic</span>
       </button>
 
-      <!--
-        Camera button — visible only for Host / approved broadcaster.
-        Hidden via JS for students and secondary instructors awaiting approval.
-      -->
       <button class="ctrl-btn off" id="toggleCam" type="button">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <polygon points="23 7 16 12 23 17 23 7"></polygon>
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
         </svg>
         <span data-i18n="liveRoom.camera">Camera</span>
       </button>
 
-      <!--
-        Screen-share button — visible only for Host / approved broadcaster.
-      -->
-      <button class="ctrl-btn" id="toggleScreen" type="button">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
+      <!-- Screen share — hidden on mobile via CSS class .hide-mobile -->
+      <button class="ctrl-btn hide-mobile" id="toggleScreen" type="button">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <rect x="2" y="3" width="20" height="14" rx="2"></rect>
           <line x1="8" y1="21" x2="16" y2="21"></line>
           <line x1="12" y1="17" x2="12" y2="21"></line>
@@ -287,48 +212,38 @@
         <span data-i18n="liveRoom.share">Share</span>
       </button>
 
-      <!--
-        Request Broadcast button — shown only for secondary instructors
-        (isInstructor && !isHost && !isBroadcasting).
-        Hidden by default; JS toggles visibility via applyRoleUI().
-      -->
-      <button class="ctrl-btn" id="reqBroadcastBtn" type="button" style="display:none;">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-             viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z"></path>
-          <rect x="3" y="6" width="12" height="12" rx="2" ry="2"></rect>
-        </svg>
-        <span id="reqBroadcastLabel" data-i18n="liveRoom.reqBroadcast">Request Broadcast</span>
-      </button>
+      <!-- Video quality selector -->
+      <div class="quality-wrap" id="qualityWrap">
+        <button class="ctrl-btn quality-btn" id="qualityBtn" type="button">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+            <path d="M8 21h8M12 17v4"></path>
+          </svg>
+          <span id="qualityLabel">720p</span>
+        </button>
+        <div class="quality-dropdown" id="qualityDropdown">
+          <button class="quality-opt active" data-quality="720p" type="button">720p HD</button>
+          <button class="quality-opt" data-quality="480p" type="button">480p</button>
+          <button class="quality-opt" data-quality="360p" type="button">360p</button>
+        </div>
+      </div>
 
-      <div class="ctrl-divider" aria-hidden="true"></div>
+      <div class="ctrl-divider"></div>
 
-      <!--
-        Raise-hand button — visible only for students.
-        Hidden for instructors via applyRoleUI().
-      -->
       <button class="ctrl-btn hand-btn" id="raiseHandBtn" type="button">
-        <span class="hand-icon-label" aria-hidden="true">✋</span>
+        <span class="hand-icon-label">✋</span>
         <span data-i18n="liveRoom.hand">Hand</span>
       </button>
 
-      <div class="ctrl-divider" aria-hidden="true"></div>
+      <div class="ctrl-divider"></div>
 
-      <!-- Leave / End session -->
-      <button class="end-btn" id="endBtn" type="button" data-i18n="liveRoom.leave">
-        Leave
-      </button>
+      <button class="end-btn" id="endBtn" type="button" data-i18n="liveRoom.leave">Leave</button>
+    </div>
+  </div>
 
-    </div><!-- /control-bar -->
+  <div class="notification-stack" id="notifStack"></div>
 
-  </div><!-- /room-layout -->
-
-  <!-- ── Toast notification stack ── -->
-  <div class="notification-stack" id="notifStack" aria-live="assertive" aria-atomic="false"></div>
-
-  <!-- ── App shell + room logic ── -->
   <script src="../js/app-shell.js"></script>
   <script src="../js/live-room.js"></script>
-
 </body>
 </html>
