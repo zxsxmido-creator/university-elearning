@@ -1008,8 +1008,14 @@ html[dir='rtl'] .p-status {
    MOBILE  (≤ 768px)
 ───────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* 1. إصلاح زرار التحديث */
+  .topbar-right { gap: 8px; }
+  #refreshBtn { margin: 0 !important; width: 28px !important; height: 28px !important; padding: 4px; }
+
+  /* 2. تظبيط زرار الـ 3 شرط والـ z-index */
   .mobile-menu-btn {
-    display: inline-flex;
+    display: inline-flex !important;
+    z-index: 1001; /* عشان يفضل فوق دايماً */
   }
 
   .room-layout {
@@ -1023,13 +1029,13 @@ html[dir='rtl'] .p-status {
     min-height: 0;
   }
 
-  /* Sidebar hidden by default on mobile; toggled via JS */
   .sidebar {
     display: none;
     grid-column: unset;
     grid-row: unset;
   }
 
+  /* 3. رفع الـ z-index للقائمة عشان تغطي الشاشة الضلمة */
   .sidebar.mobile-open {
     position: fixed;
     top: var(--topbar-height);
@@ -1037,8 +1043,8 @@ html[dir='rtl'] .p-status {
     bottom: 0;
     width: min(92vw, 340px);
     display: flex;
-    z-index: 60;
-    box-shadow: var(--shadow-panel);
+    z-index: 9999 !important; /* 👈 التعديل الأهم هنا */
+    box-shadow: -5px 0 15px rgba(0,0,0,0.5);
     border-left: 1px solid var(--border);
   }
 
@@ -1075,5 +1081,12 @@ html[dir='rtl'] .p-status {
   html[dir='rtl'] .notification-stack {
     left: 16px;
     right: 16px;
+  }
+
+  /* تظبيط تداخل الكلام في سطر Tap the mini window */
+  .stage-hint {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border-radius: 8px;
   }
 }

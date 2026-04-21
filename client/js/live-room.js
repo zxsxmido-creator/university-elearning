@@ -307,6 +307,25 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     mobileMenuBtn:     document.getElementById('mobileMenuBtn'),
     sidebar:           document.getElementById('sidebar')
   };
+  // كود فتح وقفل القائمة الجانبية (الشات) على الموبايل
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const sidebar = document.getElementById('sidebar');
+  
+  if (mobileMenuBtn && sidebar) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('mobile-open'); // 👈 غيرنا الكلمة هنا
+    });
+
+    // يقفل القائمة لو دوست في أي مكان فاضي
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768 && sidebar.classList.contains('mobile-open')) {
+        if (!sidebar.contains(e.target) && e.target !== mobileMenuBtn) {
+          sidebar.classList.remove('mobile-open');
+        }
+      }
+    });
+  }
 
   /* ═══════════════════════════════════════════════════════════════════════
      HELPERS
