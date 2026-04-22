@@ -676,11 +676,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         }
       });
 
-const response = await fetch('/api/live/token', {
+      const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // هنا السطر اللي اتغير: بيسحب التوكن الحقيقي بتاع الطالب
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
@@ -845,6 +844,15 @@ const response = await fetch('/api/live/token', {
         state.micApproved  = true;
         pushNotification(shell.t('liveRoom.requestApproved'), 'notif-user');
         applyRoleUI();
+        
+        // --- ترقية الطالب لمتحدث ---
+        if (state.agoraClient) {
+          state.agoraClient.setClientRole('host').then(() => {
+            if (state.localAudioTrack) {
+              state.agoraClient.publish([state.localAudioTrack]).catch(() => {});
+            }
+          }).catch((err) => console.warn('Failed to upgrade role:', err));
+        }
       }
 
       if (type === 'speak-denied' && isMe) {
@@ -862,6 +870,11 @@ const response = await fetch('/api/live/token', {
         updateLocalMediaState();
         applyRoleUI();
         pushNotification(shell.t('liveRoom.studentMicLocked'), '');
+        
+        // --- إرجاع الطالب كمستمع ---
+        if (state.agoraClient) {
+          state.agoraClient.setClientRole('audience').catch(() => {});
+        }
       }
     });
 
@@ -922,6 +935,11 @@ const response = await fetch('/api/live/token', {
         if (state.localAudioTrack) await state.localAudioTrack.setMuted(true);
         updateLocalMediaState();
         applyRoleUI();
+        
+        // --- إضافة إرجاع الطالب كمستمع عند قفل المايك بنفسه ---
+        if (state.agoraClient) {
+          state.agoraClient.setClientRole('audience').catch(() => {});
+        }
         return;
       }
       if (!state.micApproved) {
