@@ -200,7 +200,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     timerSeconds:      0,
     timerInterval:     null,
     currentQuality:    '720p',
-    remoteVideoActive: false   // true once the admin's remote stream is playing
+    remoteVideoActive: false
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -287,12 +287,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
   // ─────────────────────────────────────────────────────────────
   // SLOT VISIBILITY HELPERS
-  //
-  // Admin:   sees slot-local (own camera), slot-remote hidden
-  // Viewer:  sees slot-remote (admin broadcast), slot-local hidden
-  //
-  // The correct slot is shown/hidden via JS so both always fill
-  // 100 % of the stage (CSS flex:1 on .video-slot handles sizing).
   // ─────────────────────────────────────────────────────────────
   function showLocalSlotOnly() {
     el.slotLocal.style.display  = '';       // visible
@@ -300,8 +294,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   }
 
   function showRemoteSlotOnly() {
-    el.slotLocal.style.display  = 'none';   // hidden (avoid showing admin's empty local)
-    el.slotRemote.style.display = '';       // visible — remote video will be playing here
+    el.slotLocal.style.display  = 'none';   // hidden
+    el.slotRemote.style.display = '';       // visible
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -309,7 +303,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // ─────────────────────────────────────────────────────────────
   function applyRoleUI() {
     if (isInstructor) {
-      // Admin sees their own local slot
       showLocalSlotOnly();
       el.toggleCam.style.display      = 'inline-flex';
       el.toggleScreen.style.display   = 'inline-flex';
@@ -317,9 +310,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       el.requestsTabBtn.style.display = 'inline-flex';
       el.micBtnLabel.textContent      = shell.t('liveRoom.mic');
     } else {
-      // Viewer starts with remote slot hidden; it is shown when video arrives
-      // (showRemoteSlotOnly is called inside user-published)
-      // Keep local slot visible (shows waiting avatar) until stream arrives
       el.toggleCam.style.display      = 'none';
       el.toggleScreen.style.display   = 'none';
       el.raiseHand.style.display      = 'inline-flex';
@@ -383,7 +373,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   }
 
   // ─────────────────────────────────────────────────────────────
-  // RAISED HANDS
+  // RAISED HANDS & REQUESTS
   // ─────────────────────────────────────────────────────────────
   function renderHands() {
     const count = state.raisedHands.length;
@@ -425,9 +415,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   }
 
   function addOrUpdateRaisedHand(id, user) {
-    const idx = state.raisedHands.findIndex(
-      (h) => h.id === id || h.user.name === user.name
-    );
+    const idx = state.raisedHands.findIndex((h) => h.id === id || h.user.name === user.name);
     if (idx >= 0) state.raisedHands[idx] = { id, user };
     else state.raisedHands.push({ id, user });
   }
@@ -436,9 +424,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     state.raisedHands = state.raisedHands.filter((h) => h.id !== id);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // SPEAK REQUESTS
-  // ─────────────────────────────────────────────────────────────
   function renderSpeakRequests() {
     const count = state.speakRequests.length;
     el.requestsCount.textContent = String(count);
@@ -556,11 +541,14 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   }
 
   // ─────────────────────────────────────────────────────────────
-  // LOCAL MEDIA STATE (admin only — updates slot-local controls)
+  // LOCAL MEDIA STATE
+  // FIX: Explicitly hide the avatar if Camera OR ScreenShare is active
   // ─────────────────────────────────────────────────────────────
   function updateLocalMediaState() {
-    const showAvatar = !state.camOn || !state.localVideoTrack;
+    // If either camera or screen share is on, DO NOT show the avatar placeholder
+    const showAvatar = !(state.camOn || state.screenSharing);
     el.localAvatar.style.display = showAvatar ? 'flex' : 'none';
+    
     el.localMicIcon.classList.toggle('muted', !state.micOn);
     el.toggleMic.classList.toggle('off', !state.micOn);
     el.toggleCam.classList.toggle('off', !state.camOn);
@@ -629,7 +617,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     }
 
     if (!isInstructor && state.agoraClient) {
-      // 0 = high-quality stream, 1 = low-quality stream
       const streamType = quality === '360p' ? 1 : 0;
       try {
         state.agoraClient.remoteUsers.forEach((remoteUser) => {
@@ -643,78 +630,52 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
   // ─────────────────────────────────────────────────────────────
   // AGORA INIT
-  //
-  // Fix #1 (audio quality): AEC + ANS + AGC on mic track creation.
-  // Fix #2 (viewer black screen): In user-published, subscribe and
-  //   play ANY incoming remote video without checking the sender's
-  //   role (Agora's remote user object has no role field).
-  //   We render it into slot-remote and switch the UI to show that slot.
-  //   Since ONLY the admin publishes video (enforced in UI logic), this
-  //   is functionally equivalent to "admin-only" video on the stage.
   // ─────────────────────────────────────────────────────────────
   async function initAgora() {
     if (typeof AgoraRTC === 'undefined' || !window.AGORA_APP_ID) return;
 
     try {
-      // Use "live" mode with vp8 codec
       state.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
-
-      // Set role: admin = host (publishes), viewer = audience (subscribes only)
       await state.agoraClient.setClientRole(isInstructor ? 'host' : 'audience');
 
-      // Enable dual stream so viewers can switch quality
       if (!isInstructor) {
         try { await state.agoraClient.enableDualStream(); } catch (_) {}
       }
 
-      // ── user-published ────────────────────────────────────────
-      // THE FIX: subscribe and play ALL incoming remote video tracks
-      // unconditionally. Do NOT gate on role — Agora gives us no role
-      // info on the remoteUser object, and our UI already prevents
-      // non-admins from publishing video. So every incoming video is
-      // necessarily from the admin/host.
       state.agoraClient.on('user-published', async (remoteUser, mediaType) => {
-        // Always subscribe first
         await state.agoraClient.subscribe(remoteUser, mediaType);
 
         if (mediaType === 'video') {
           state.remoteVideoActive = true;
-
-          // Play the remote admin video into slot-remote's media container
+          // FIX: Hide the remote avatar placeholder since video is now active
+          el.remoteAvatar.style.display = 'none'; 
+          
           remoteUser.videoTrack.play('slot-remote-media');
 
-          // Show slot-remote and hide slot-local for viewers
           if (!isInstructor) {
             showRemoteSlotOnly();
-          }
-
-          // Apply current quality preference for subscribers
-          if (!isInstructor) {
             const streamType = state.currentQuality === '360p' ? 1 : 0;
-            try {
-              state.agoraClient.setRemoteVideoStreamType(remoteUser, streamType);
-            } catch (_) {}
+            try { state.agoraClient.setRemoteVideoStreamType(remoteUser, streamType); } catch (_) {}
           }
         }
 
         if (mediaType === 'audio') {
-          // Play audio for ALL users regardless of role
           remoteUser.audioTrack.play();
         }
       });
 
-      // ── user-unpublished ──────────────────────────────────────
       state.agoraClient.on('user-unpublished', (remoteUser, mediaType) => {
         if (mediaType === 'video') {
           state.remoteVideoActive = false;
-          // Viewer: hide remote slot, show local waiting avatar
+          // FIX: Show the remote avatar again when the video stops
+          el.remoteAvatar.style.display = 'flex'; 
+          
           if (!isInstructor) {
             showLocalSlotOnly();
           }
         }
       });
 
-      // ── Token fetch & join ────────────────────────────────────
       const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
@@ -736,32 +697,21 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       const { token, appId } = await response.json();
       await state.agoraClient.join(appId, channel, token, null);
 
-      // ── LOCAL TRACKS (both roles get a mic; only admin gets camera) ──
-      // Fix #1: explicit AEC / ANS / AGC for noise/echo/delay suppression
       state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-        AEC: true,   // Acoustic Echo Cancellation
-        ANS: true,   // Automatic Noise Suppression
-        AGC: true    // Automatic Gain Control
+        AEC: true, ANS: true, AGC: true
       });
-
-      // Start muted by default for everyone
       await state.localAudioTrack.setMuted(true);
 
       if (isInstructor) {
-        // Admin also gets a video track (landscape 16:9)
         state.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
           encoderConfig: VIDEO_QUALITY_CONFIGS[state.currentQuality]
         });
-
         await state.localVideoTrack.setMuted(true);
-
-        // Show local camera preview in slot-local (even when muted)
         try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
 
         updateLocalMediaState();
         await state.agoraClient.publish([state.localAudioTrack, state.localVideoTrack]);
       } else {
-        // Viewers publish only the mic track (so admin can approve & unmute them)
         updateLocalMediaState();
         await state.agoraClient.publish([state.localAudioTrack]);
       }
@@ -772,7 +722,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   }
 
   // ─────────────────────────────────────────────────────────────
-  // SCREEN SHARE (admin only)
+  // SCREEN SHARE
   // ─────────────────────────────────────────────────────────────
   async function startScreenShare() {
     el.screenShareLabel.hidden = false;
@@ -780,6 +730,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
     if (!state.agoraClient || typeof AgoraRTC === 'undefined') {
       state.screenSharing = true;
+      updateLocalMediaState(); // Ensure avatar hides immediately
       return;
     }
 
@@ -790,9 +741,11 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       await state.agoraClient.publish(activeTrack);
       activeTrack.on?.('track-ended', stopScreenShare);
       state.screenSharing = true;
+      updateLocalMediaState(); // Hide avatar
     } catch (err) {
       console.warn('[ScreenShare] Failed:', err);
       state.screenSharing = false;
+      updateLocalMediaState(); // Reset state
       el.screenShareLabel.hidden = true;
       el.toggleScreen.classList.remove('active');
     }
@@ -810,6 +763,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     }
     state.screenTrack      = null;
     state.screenSharing    = false;
+    updateLocalMediaState(); // Show avatar if camera is off
     el.screenShareLabel.hidden = true;
     el.toggleScreen.classList.remove('active');
   }
@@ -882,7 +836,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       renderParticipants();
     });
 
-    // Student receives admin signals
     state.socket.on('instructor-signal', ({ type, targetId }) => {
       const isMe = state.socket && targetId === state.socket.id;
 
@@ -911,7 +864,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       }
     });
 
-    // Admin receives speak requests
     state.socket.on('speak-request', ({ id, user }) => {
       if (!isInstructor) return;
       if (state.speakRequests.find((r) => r.id === id)) return;
@@ -938,8 +890,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // ─────────────────────────────────────────────────────────────
   // EVENT LISTENERS
   // ─────────────────────────────────────────────────────────────
-
-  // Sidebar tabs
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
@@ -950,7 +900,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     });
   });
 
-  // Chat
   el.chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
@@ -960,14 +909,12 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   });
   document.getElementById('sendBtn').addEventListener('click', sendMessage);
 
-  // Mic (role-aware)
   el.toggleMic.addEventListener('click', async () => {
     if (isInstructor) {
       state.micOn = !state.micOn;
       if (state.localAudioTrack) await state.localAudioTrack.setMuted(!state.micOn);
       updateLocalMediaState();
     } else {
-      // Viewer: self-mute if currently speaking
       if (state.micOn) {
         state.micOn       = false;
         state.micApproved = false;
@@ -976,7 +923,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         applyRoleUI();
         return;
       }
-      // Viewer: request to speak or unmute if already approved
       if (!state.micApproved) {
         if (state.micRequested) {
           pushNotification(shell.t('liveRoom.requestSent'), '');
@@ -998,7 +944,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     }
   });
 
-  // Camera (admin only)
   el.toggleCam.addEventListener('click', async () => {
     if (!isInstructor) return;
     state.camOn = !state.camOn;
@@ -1006,17 +951,14 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     updateLocalMediaState();
   });
 
-  // Screen share (admin only, desktop only via CSS)
   el.toggleScreen.addEventListener('click', async () => {
     if (!isInstructor) return;
     if (state.screenSharing) await stopScreenShare();
     else await startScreenShare();
   });
 
-  // Raise hand (viewers only)
   el.raiseHand.addEventListener('click', toggleLocalHand);
 
-  // Quality selector
   el.qualityBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const willOpen = !el.qualityWrap.classList.contains('open');
@@ -1031,33 +973,28 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     });
   });
 
-  // Refresh
   el.refreshBtn.addEventListener('click', () => {
     pushNotification(shell.t('liveRoom.refreshing'), 'notif-user');
     if (state.socket && !state.socketConnected) { state.socket.connect(); }
   });
 
-  // Leave
   el.endBtn.addEventListener('click', async () => {
     if (!window.confirm(shell.t('liveRoom.leaveConfirm'))) return;
     await cleanup();
     window.location.href = 'dashboard.html';
   });
 
-  // Close quality dropdown on outside click
   document.addEventListener('click', (e) => {
     if (!el.qualityWrap.contains(e.target)) {
       el.qualityWrap.classList.remove('open');
     }
   });
 
-  // Reposition quality dropdown on window resize
   window.addEventListener('resize', () => {
     if (el.qualityWrap.classList.contains('open')) positionQualityDropdown();
     if (window.innerWidth > 768) shell.closeSidebar();
   });
 
-  // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       el.qualityWrap.classList.remove('open');
@@ -1065,7 +1002,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     }
   });
 
-  // Language change
   window.addEventListener('unilearn:language-changed', () => {
     updateSessionCopy();
     renderParticipants();
@@ -1086,7 +1022,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   });
 
   appendSystemMessage(shell.t('liveRoom.sessionStarted'));
-  updateSessionCopy();      // sets title, calls applyRoleUI() → showLocalSlotOnly for admin
+  updateSessionCopy();
   updateViewerCount();
   renderParticipants();
   renderHands();

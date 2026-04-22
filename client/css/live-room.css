@@ -208,10 +208,6 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
 
 /* ────────────────────────────────────────────
    VIDEO STAGE
-   The stage is a flex container that centres
-   its single child (.video-grid) which in turn
-   stretches its single visible .video-slot to
-   fill the entire area — no gaps, no black bars.
 ──────────────────────────────────────────── */
 .video-stage {
   position: relative;
@@ -220,7 +216,6 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   background: #000;
   grid-column: 1;
   grid-row: 1;
-  /* Centre the grid inside the stage */
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -228,20 +223,14 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
 
 /* ── VIDEO GRID — always a single full-size slot ── */
 .video-grid {
-  /* Stretch to fill the stage completely */
   width: 100%;
   height: 100%;
   display: flex;
   align-items: stretch;
 }
 
-/*
-  Every .video-slot (local OR remote) fills 100 % of
-  the grid when it is the only visible child.
-  There is never more than one visible slot at a time.
-*/
 .video-slot {
-  flex: 1;                  /* fills the flex grid */
+  flex: 1;
   position: relative;
   overflow: hidden;
   background: var(--bg-surface);
@@ -252,14 +241,12 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   min-height: 0;
 }
 
-/* Slots that are explicitly hidden via JS style.display='none'
-   are already removed from the layout, but add a hard fallback */
 .video-slot[style*="display: none"],
 .video-slot[style*="display:none"] {
   display: none !important;
 }
 
-/* ── MEDIA LAYER — landscape, object-fit:cover, no distortion ── */
+/* ── MEDIA LAYER — FIXED: object-fit contain to prevent cropping ── */
 .media-layer {
   position: absolute;
   inset: 0;
@@ -272,7 +259,7 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
 .media-layer video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain !important; /* FIX: Prevents cropping on mobile */
   object-position: center;
 }
 
@@ -800,7 +787,7 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
 .end-btn:hover,
 .end-btn:focus-visible { background: #e02020; transform: translateY(-1px); outline: none; }
 
-/* ── QUALITY SELECTOR — fixed position, above video canvas ── */
+/* ── QUALITY SELECTOR ── */
 .quality-wrap { position: relative; flex-shrink: 0; }
 
 .quality-btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; }
