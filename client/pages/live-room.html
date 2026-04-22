@@ -54,8 +54,14 @@
     <section class="video-stage" id="videoStage">
       <div class="screenshare-label" id="screenShareLabel" hidden data-i18n="liveRoom.screenShareLabel">Screen share</div>
 
-      <!-- Admin-only stage: only slot-local is ever rendered -->
+      <!--
+        Admin sees: #slot-local (their own camera).
+        Viewer sees: #slot-remote (admin's broadcast, revealed by JS when video arrives).
+        Only one slot is ever visible at a time.
+      -->
       <div class="video-grid" id="videoGrid">
+
+        <!-- Admin's local slot — visible to admin, hidden for viewers via JS -->
         <article class="video-slot" id="slot-local" data-slot="local">
           <div class="media-layer" id="slot-local-media"></div>
           <div class="avatar-placeholder" id="localAvatar">S</div>
@@ -71,9 +77,32 @@
             </svg>
           </div>
         </article>
+
+        <!-- Remote slot — hidden until admin video arrives (viewers only) -->
+        <article class="video-slot" id="slot-remote" data-slot="remote" style="display:none">
+          <div class="media-layer" id="slot-remote-media"></div>
+          <div class="avatar-placeholder" id="remoteAvatar">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="2"></circle>
+              <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
+            </svg>
+          </div>
+          <div class="slot-label">
+            <span class="slot-role" data-i18n="liveRoom.hostLabel">Host</span>
+            <span id="remoteName">Live</span>
+          </div>
+          <div class="mic-indicator" id="remoteMicIcon">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+            </svg>
+          </div>
+        </article>
+
       </div>
 
-      <p class="stage-hint" id="singleSpeakerHint" data-i18n="liveRoom.singleSpeakerHint">
+      <p class="stage-hint" id="singleSpeakerHint">
         Admin is broadcasting live.
       </p>
     </section>
