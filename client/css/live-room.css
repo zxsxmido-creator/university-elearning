@@ -24,7 +24,6 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { font-size: 13px; }
 
 /* Fix #5 — body is exactly the viewport, no overflow */
@@ -44,13 +43,11 @@ body {
 
 button, textarea { font: inherit; }
 
-/* ────────────────────────────────────────────
-   TOPBAR
-──────────────────────────────────────────── */
+/* ── TOPBAR ── */
 .topbar {
   height: var(--topbar-height);
   min-height: var(--topbar-height);
-  flex-shrink: 0;               /* never shrinks — Fix #5 */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -200,58 +197,49 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   flex-shrink: 0;
 }
 
-/* ────────────────────────────────────────────
-   ROOM LAYOUT  — Fix #5
-   Body is 100dvh flex-col.
-   .room-layout gets the remaining height via flex:1
-   and uses grid rows so the control bar is always visible.
-──────────────────────────────────────────── */
+/* ── ROOM LAYOUT ── */
 .room-layout {
-  flex: 1;                        /* fill everything below the topbar */
-  min-height: 0;                  /* critical: allows grid children to shrink */
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  grid-template-rows: minmax(0, 1fr) auto; /* video row grows, control bar is auto */
+  grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
 }
 
-/* ────────────────────────────────────────────
-   VIDEO STAGE  — Fix #2 + Fix #5
-──────────────────────────────────────────── */
+/* ── VIDEO STAGE — admin-only, 100% fill, no gaps ── */
 .video-stage {
   position: relative;
-  overflow: hidden;               /* Fix #5: never pushes control bar down */
-  min-height: 0;                  /* Fix #5 */
+  overflow: hidden;
+  min-height: 0;
   background: #000;
   grid-column: 1;
   grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ── VIDEO GRID — Fix #2 ──
-   Default: single video fills 100% of the stage.
-   When two slots are visible (both display != none),
-   the CSS switches to a 2-column split via .has-remote.
-──────────────────────────────────────────── */
+/* ── VIDEO GRID — single admin slot fills 100% ── */
 .video-grid {
   width: 100%;
   height: 100%;
-  display: flex;              /* flex instead of grid for single-fill behaviour */
+  display: flex;
 }
 
-/* Single slot: fills entire stage */
+/* The single admin slot always fills the entire stage */
 .video-grid .video-slot {
   flex: 1;
   min-width: 0;
   min-height: 0;
 }
 
-/* Two active slots: side-by-side */
-.video-grid.has-remote {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Hard guard: no second slot ever appears */
+#slot-remote {
+  display: none !important;
 }
 
-/* ── Video slot ── */
+/* ── VIDEO SLOT ── */
 .video-slot {
   position: relative;
   overflow: hidden;
@@ -261,10 +249,10 @@ html[dir='rtl'] .topbar-meta { flex-direction: row-reverse; }
   justify-content: center;
 }
 
-/* Fix #4 — slots with no rendered content are invisible */
+/* Fallback: slots truly empty of content stay invisible */
 .video-slot:empty { display: none !important; }
 
-/* ── Media layer — landscape, object-fit:cover, no distortion ── */
+/* ── MEDIA LAYER — landscape, object-fit:cover ── */
 .media-layer {
   position: absolute;
   inset: 0;
@@ -380,9 +368,7 @@ html[dir='rtl'] .mic-indicator { right: auto; left: 12px; }
 
 .screenshare-label[hidden] { display: none; }
 
-/* ────────────────────────────────────────────
-   SIDEBAR
-──────────────────────────────────────────── */
+/* ── SIDEBAR ── */
 .sidebar {
   grid-column: 2;
   grid-row: 1 / span 2;
@@ -467,7 +453,6 @@ html[dir='rtl'] .sidebar { border-left: 0; border-right: 1px solid var(--border)
 }
 
 .chat-messages { display: flex; flex-direction: column; gap: 12px; }
-
 .chat-msg { display: grid; gap: 4px; }
 
 .msg-meta { display: flex; align-items: baseline; gap: 8px; }
@@ -574,7 +559,6 @@ html[dir='rtl'] .participant-item { flex-direction: row-reverse; }
 }
 
 .p-avatar.instructor-avatar { color: var(--accent-hand); }
-
 .p-info { flex: 1; min-width: 0; }
 
 .p-name {
@@ -723,14 +707,11 @@ html[dir='rtl'] .request-item { flex-direction: row-reverse; }
 .participant-item:hover .mute-participant-btn { opacity: 1; }
 .mute-participant-btn:hover { background: rgba(255, 59, 59, 0.12); }
 
-/* ────────────────────────────────────────────
-   CONTROL BAR — Fix #5
-   grid-row:2 / auto height — always visible at bottom.
-──────────────────────────────────────────── */
+/* ── CONTROL BAR ── */
 .control-bar {
   grid-column: 1;
   grid-row: 2;
-  flex-shrink: 0;               /* never shrinks — Fix #5 */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -738,7 +719,7 @@ html[dir='rtl'] .request-item { flex-direction: row-reverse; }
   border-top: 1px solid var(--border);
   background: var(--bg-panel);
   min-height: 58px;
-  overflow: visible;            /* allow quality dropdown to escape upward */
+  overflow: visible;
 }
 
 html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
@@ -813,7 +794,7 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
 .end-btn:hover,
 .end-btn:focus-visible { background: #e02020; transform: translateY(-1px); outline: none; }
 
-/* ── Quality selector — Fix #3 (z-index above Agora video) ── */
+/* ── QUALITY SELECTOR — Fix #3 (z-index above video) ── */
 .quality-wrap {
   position: relative;
   flex-shrink: 0;
@@ -822,7 +803,7 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
 .quality-btn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; }
 
 .quality-dropdown {
-  position: fixed;             /* Fix #3: fixed breaks out of any stacking context */
+  position: fixed;
   min-width: 120px;
   display: none;
   flex-direction: column;
@@ -831,7 +812,7 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
   background: var(--bg-panel);
   box-shadow: 0 -4px 24px rgba(0,0,0,0.7);
   overflow: hidden;
-  z-index: 9999 !important;   /* Fix #3: guaranteed above video canvas */
+  z-index: 9999 !important;
 }
 
 .quality-wrap.open .quality-dropdown { display: flex; }
@@ -849,13 +830,10 @@ html[dir='rtl'] .control-bar { flex-direction: row-reverse; }
 }
 
 html[dir='rtl'] .quality-opt { text-align: right; }
-
 .quality-opt:hover { background: var(--bg-raised); color: var(--text-primary); }
 .quality-opt.active { background: rgba(0, 212, 255, 0.1); color: var(--accent-primary); }
 
-/* ────────────────────────────────────────────
-   NOTIFICATION STACK
-──────────────────────────────────────────── */
+/* ── NOTIFICATION STACK ── */
 .notification-stack {
   position: fixed;
   top: 70px;
@@ -893,9 +871,7 @@ html[dir='rtl'] .notification-stack { right: auto; left: 14px; }
 
 html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
 
-/* ────────────────────────────────────────────
-   RESPONSIVE — MOBILE (≤ 768px)
-──────────────────────────────────────────── */
+/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
 
   .mobile-menu-btn { display: inline-flex; }
@@ -920,17 +896,12 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
   .viewer-count { font-size: 10px; }
   .timer { font-size: 10px; padding: 3px 8px; }
 
-  /* Fix #5 mobile: room fills remaining height with no overflow */
   .room-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
-  /* Sidebar hidden by default on mobile */
-  .sidebar {
-    display: none;
-    grid-column: 1;
-  }
+  .sidebar { display: none; grid-column: 1; }
 
   .sidebar.mobile-open {
     position: fixed;
@@ -945,12 +916,11 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
 
   html[dir='rtl'] .sidebar.mobile-open { right: auto; left: 0; }
 
-  /* Fix #5 mobile control bar: horizontal scroll, no wrap, no shrink */
   .control-bar {
     grid-column: 1;
     grid-row: 2;
     overflow-x: auto;
-    overflow-y: visible;   /* allow quality dropdown upward */
+    overflow-y: visible;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -977,20 +947,12 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
 
   .ctrl-divider { height: 24px; }
 
-  /* Screen share always hidden on mobile */
   .hide-mobile { display: none !important; }
 
-  /* Quality dropdown: anchor to bottom of screen on mobile */
   .quality-dropdown {
     bottom: 60px;
     left: 10px !important;
     right: auto;
-  }
-
-  /* Two-column grid collapses to single column on mobile */
-  .video-grid.has-remote {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 
   .notification-stack {

@@ -54,6 +54,7 @@
     <section class="video-stage" id="videoStage">
       <div class="screenshare-label" id="screenShareLabel" hidden data-i18n="liveRoom.screenShareLabel">Screen share</div>
 
+      <!-- Admin-only stage: only slot-local is ever rendered -->
       <div class="video-grid" id="videoGrid">
         <article class="video-slot" id="slot-local" data-slot="local">
           <div class="media-layer" id="slot-local-media"></div>
@@ -70,26 +71,10 @@
             </svg>
           </div>
         </article>
-
-        <article class="video-slot" id="slot-remote" data-slot="remote" style="display:none">
-          <div class="media-layer" id="slot-remote-media"></div>
-          <div class="avatar-placeholder" id="remoteAvatar">?</div>
-          <div class="slot-label">
-            <span class="slot-role" data-i18n="liveRoom.cohostLabel">Co-host</span>
-            <span id="remoteName">Waiting...</span>
-          </div>
-          <div class="mic-indicator" id="remoteMicIcon">
-            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="23"></line>
-            </svg>
-          </div>
-        </article>
       </div>
 
       <p class="stage-hint" id="singleSpeakerHint" data-i18n="liveRoom.singleSpeakerHint">
-        Tap the mini window to switch the focused speaker.
+        Admin is broadcasting live.
       </p>
     </section>
 
@@ -161,8 +146,6 @@
     </aside>
 
     <div class="control-bar" id="controlBar">
-
-      <!-- NO view-mode layout toggle buttons — removed per Fix #1 -->
 
       <button class="ctrl-btn off" id="toggleMic" type="button">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">

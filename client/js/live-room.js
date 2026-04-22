@@ -73,7 +73,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         studentMicLocked:   'Mic locked. Request to speak first.',
         qualityLabel:       'Quality',
         refreshing:         'Refreshing connection...',
-        singleSpeakerHint:  'Tap the mini window to switch the focused speaker.'
+        singleSpeakerHint:  'Admin is broadcasting live.'
       }
     },
     ar: {
@@ -144,7 +144,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         studentMicLocked:   'الميكروفون مقفل. اطلب الكلام أولاً.',
         qualityLabel:       'الجودة',
         refreshing:         'جارٍ تحديث الاتصال...',
-        singleSpeakerHint:  'اضغط على النافذة الصغيرة لتبديل المتحدث الرئيسي.'
+        singleSpeakerHint:  'المضيف يبث الآن مباشرة.'
       }
     }
   };
@@ -162,10 +162,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // SESSION TITLES
   // ─────────────────────────────────────────────────────────────
   const SESSION_TITLES = {
-    'cs-binary-trees':     { en: 'Advanced Algorithms – Binary Trees Deep Dive',    ar: 'الخوارزميات المتقدمة – تعمق في الأشجار الثنائية' },
-    'math-linear-algebra': { en: 'Linear Algebra – Eigenvalues Workshop',           ar: 'الجبر الخطي – ورشة القيم الذاتية' },
-    'physics-quantum':     { en: 'Quantum Mechanics – Wave Functions Seminar',      ar: 'ميكانيكا الكم – ندوة الدوال الموجية' },
-    'db-indexing':         { en: 'Database Systems – Indexing Strategies Review',   ar: 'أنظمة قواعد البيانات – مراجعة استراتيجيات الفهرسة' }
+    'cs-binary-trees':     { en: 'Advanced Algorithms – Binary Trees Deep Dive',   ar: 'الخوارزميات المتقدمة – تعمق في الأشجار الثنائية' },
+    'math-linear-algebra': { en: 'Linear Algebra – Eigenvalues Workshop',          ar: 'الجبر الخطي – ورشة القيم الذاتية' },
+    'physics-quantum':     { en: 'Quantum Mechanics – Wave Functions Seminar',     ar: 'ميكانيكا الكم – ندوة الدوال الموجية' },
+    'db-indexing':         { en: 'Database Systems – Indexing Strategies Review',  ar: 'أنظمة قواعد البيانات – مراجعة استراتيجيات الفهرسة' }
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -190,10 +190,9 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     agoraClient:       null,
     localAudioTrack:   null,
     localVideoTrack:   null,
-    remoteVideoActive: false,   // true only when a remote user is actively publishing video
     screenTrack:       null,
-    micOn:             false,   // hardware OFF by default
-    camOn:             false,   // hardware OFF by default
+    micOn:             false,
+    camOn:             false,
     micApproved:       false,
     micRequested:      false,
     screenSharing:     false,
@@ -223,11 +222,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     videoGrid:         document.getElementById('videoGrid'),
     screenShareLabel:  document.getElementById('screenShareLabel'),
     localAvatar:       document.getElementById('localAvatar'),
-    remoteAvatar:      document.getElementById('remoteAvatar'),
     localName:         document.getElementById('localName'),
-    remoteName:        document.getElementById('remoteName'),
     localMicIcon:      document.getElementById('localMicIcon'),
-    remoteMicIcon:     document.getElementById('remoteMicIcon'),
     chatMessages:      document.getElementById('chatMessages'),
     chatInput:         document.getElementById('chatInput'),
     participantsList:  document.getElementById('participantsList'),
@@ -249,7 +245,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     endBtn:            document.getElementById('endBtn'),
     refreshBtn:        document.getElementById('refreshBtn'),
     slotLocal:         document.getElementById('slot-local'),
-    slotRemote:        document.getElementById('slot-remote'),
     micBtnLabel:       document.getElementById('micBtnLabel'),
     qualityBtn:        document.getElementById('qualityBtn'),
     qualityWrap:       document.getElementById('qualityWrap'),
@@ -280,19 +275,9 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     });
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // FIX #2 — Show/hide remote slot and toggle .has-remote
-  // Remote slot is ONLY shown when the remote user is
-  // actively publishing a video track.
-  // ─────────────────────────────────────────────────────────────
-  function syncRemoteSlotVisibility() {
-    if (state.remoteVideoActive) {
-      el.slotRemote.style.display = '';           // visible
-      el.videoGrid.classList.add('has-remote');   // two-column split
-    } else {
-      el.slotRemote.style.display = 'none';       // hidden — no empty box
-      el.videoGrid.classList.remove('has-remote'); // local fills 100%
-    }
+  // Determine if a participant object has an admin/instructor role
+  function participantIsInstructor(p) {
+    return p && (p.role === 'instructor' || p.role === 'admin');
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -324,13 +309,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       getSessionTitle()[shell.language] || getSessionTitle().en;
     el.localName.textContent = userName || shell.t('liveRoom.youLabel');
     applyRoleUI();
-    syncRemoteNameLabel();
-  }
-
-  function syncRemoteNameLabel() {
-    const remote = participantList().find((p) => !p.isLocal);
-    el.remoteName.textContent   = remote ? remote.name : shell.t('liveRoom.waiting');
-    el.remoteAvatar.textContent = remote ? remote.name.charAt(0).toUpperCase() : '?';
   }
 
   function updateViewerCount() {
@@ -559,11 +537,6 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     el.toggleCam.classList.toggle('off', !state.camOn);
   }
 
-  function updateRemoteMediaState() {
-    // Only show the remote avatar when the slot is visible but video isn't playing
-    el.remoteAvatar.style.display = state.remoteVideoActive ? 'none' : 'flex';
-  }
-
   // ─────────────────────────────────────────────────────────────
   // TIMER
   // ─────────────────────────────────────────────────────────────
@@ -601,9 +574,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // VIDEO QUALITY
   // ─────────────────────────────────────────────────────────────
   function positionQualityDropdown() {
-    // Fix #3: position the dropdown above the button using fixed coordinates
-    const btn  = el.qualityBtn.getBoundingClientRect();
-    const dd   = el.qualityWrap.querySelector('.quality-dropdown');
+    const btn = el.qualityBtn.getBoundingClientRect();
+    const dd  = el.qualityWrap.querySelector('.quality-dropdown');
     dd.style.left   = `${btn.left}px`;
     dd.style.bottom = `${window.innerHeight - btn.top + 8}px`;
     dd.style.top    = 'auto';
@@ -641,57 +613,72 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
   // ─────────────────────────────────────────────────────────────
   // AGORA INIT
+  // Fix #1: mode:"live", AEC/ANS/AGC on mic track
+  // Fix #2: user-published only renders video for admin/instructor
   // ─────────────────────────────────────────────────────────────
   async function initAgora() {
     if (typeof AgoraRTC === 'undefined' || !window.AGORA_APP_ID) return;
 
     try {
-      state.agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      // Fix #1 — use "live" mode for broadcast; codec vp8
+      state.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+
+      // Set client role
+      await state.agoraClient.setClientRole(isInstructor ? 'host' : 'audience');
 
       // Subscribers: enable dual stream for quality switching
       if (!isInstructor) {
         try { await state.agoraClient.enableDualStream(); } catch (_) {}
       }
 
-      // ── Fix #4: Remote user publishes video ────────────────
-      // ONLY mark remoteVideoActive = true when a video track arrives.
-      // This prevents empty PIP slots for passive audio/chat-only users.
+      // ── Fix #2: user-published — admin-only video rendering ──
       state.agoraClient.on('user-published', async (remoteUser, mediaType) => {
+        // Always subscribe so we can receive the track data
         await state.agoraClient.subscribe(remoteUser, mediaType);
 
         if (mediaType === 'video') {
-          state.remoteVideoActive = true;
-          updateRemoteMediaState();
-          syncRemoteSlotVisibility();           // Fix #2: show slot + two-column grid
-          remoteUser.videoTrack.play('slot-remote-media');
+          // Find this remote user in our participants map to check their role
+          const remoteParticipant = Array.from(state.participants.values()).find(
+            (p) => String(p.agoraUid) === String(remoteUser.uid)
+              || p.id === String(remoteUser.uid)
+          );
 
-          if (!isInstructor) {
-            const streamType = state.currentQuality === '360p' ? 1 : 0;
-            try { state.agoraClient.setRemoteVideoStreamType(remoteUser, streamType); } catch (_) {}
+          // ONLY render video if the publisher is an instructor/admin
+          if (participantIsInstructor(remoteParticipant)) {
+            // Play into the local slot when the admin is a remote (e.g., second admin view)
+            // In most deployments the admin IS the local user, but handle the edge case:
+            remoteUser.videoTrack.play('slot-local-media');
+
+            if (!isInstructor) {
+              const streamType = state.currentQuality === '360p' ? 1 : 0;
+              try { state.agoraClient.setRemoteVideoStreamType(remoteUser, streamType); } catch (_) {}
+            }
           }
+          // Non-admin publishers: subscribed but video is intentionally NOT played/rendered
         }
 
         if (mediaType === 'audio') {
+          // Play audio for ALL participants regardless of role
           remoteUser.audioTrack.play();
         }
       });
 
-      // ── Fix #4: Remote user stops publishing ──────────────
+      // ── user-unpublished ──────────────────────────────────────
       state.agoraClient.on('user-unpublished', (remoteUser, mediaType) => {
-        if (mediaType === 'video') {
-          state.remoteVideoActive = false;
-          updateRemoteMediaState();
-          syncRemoteSlotVisibility();           // Fix #2: hide slot + single-fill
+        // Nothing extra needed — no remote video slots exist in the DOM
+        if (mediaType === 'audio') {
+          // Audio tracks are cleaned up automatically by the SDK
         }
       });
 
+      // ── Token fetch & join ────────────────────────────────────
       const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer uni-learn-secure-123'
         },
-        body: JSON.stringify({ channelName: channel, uid: 0, role: 'publisher' })
+        body: JSON.stringify({ channelName: channel, uid: 0, role: isInstructor ? 'publisher' : 'subscriber' })
       });
 
       if (!response.ok) {
@@ -702,22 +689,41 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       const { token, appId } = await response.json();
       await state.agoraClient.join(appId, channel, token, null);
 
-      // Create tracks with landscape 16:9 preference
-      state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      state.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
-        encoderConfig: VIDEO_QUALITY_CONFIGS[state.currentQuality]
-      });
-
-      // Hardware OFF by default for ALL users
-      await state.localAudioTrack.setMuted(true);
-      await state.localVideoTrack.setMuted(true);
-
+      // ── Create local tracks (admin/host only) ─────────────────
       if (isInstructor) {
-        try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
-      }
+        // Fix #1 — explicit AEC, ANS, AGC for noise/echo/delay suppression
+        state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          AEC: true,   // Acoustic Echo Cancellation
+          ANS: true,   // Automatic Noise Suppression
+          AGC: true    // Automatic Gain Control
+        });
 
-      updateLocalMediaState();
-      await state.agoraClient.publish([state.localAudioTrack, state.localVideoTrack]);
+        state.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
+          encoderConfig: VIDEO_QUALITY_CONFIGS[state.currentQuality]  // 1280×720 landscape
+        });
+
+        // Hardware OFF by default
+        await state.localAudioTrack.setMuted(true);
+        await state.localVideoTrack.setMuted(true);
+
+        // Show admin's own camera preview locally
+        try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
+
+        updateLocalMediaState();
+        await state.agoraClient.publish([state.localAudioTrack, state.localVideoTrack]);
+      } else {
+        // Students: create mic track with AEC/ANS/AGC for when they are approved to speak
+        state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          AEC: true,
+          ANS: true,
+          AGC: true
+        });
+
+        // Start muted — student must request to speak
+        await state.localAudioTrack.setMuted(true);
+        updateLocalMediaState();
+        await state.agoraClient.publish([state.localAudioTrack]);
+      }
 
     } catch (err) {
       console.warn('[Agora] Initialization failed:', err);
@@ -725,7 +731,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   }
 
   // ─────────────────────────────────────────────────────────────
-  // SCREEN SHARE
+  // SCREEN SHARE (admin only)
   // ─────────────────────────────────────────────────────────────
   async function startScreenShare() {
     el.screenShareLabel.hidden = false;
@@ -787,36 +793,28 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       state.participants.clear();
       users.forEach((u) => {
         if (u.name !== userName || u.role !== userRole) {
-          state.participants.set(u.id, u);
+          // Store with agoraUid so we can match against Agora's remoteUser.uid
+          state.participants.set(u.id, { ...u, agoraUid: u.agoraUid || u.id });
         }
       });
-      syncRemoteNameLabel();
       updateViewerCount();
       renderParticipants();
       renderHands();
-      // Fix #4: do NOT show the remote slot just because a user joined —
-      // it will only appear when they actually publish a video track.
     });
 
     state.socket.on('user-joined', (user) => {
-      state.participants.set(user.id, user);
-      syncRemoteNameLabel();
+      state.participants.set(user.id, { ...user, agoraUid: user.agoraUid || user.id });
       updateViewerCount();
       renderParticipants();
       pushNotification(shell.t('liveRoom.joinedToast', { name: user.name }), 'notif-user');
       appendSystemMessage(shell.t('liveRoom.joinedMessage', { name: user.name }));
-      // Fix #4: no video slot shown until user-published fires
+      // Fix #2: no video slot created here — only done inside user-published for admins
     });
 
     state.socket.on('user-left', ({ id }) => {
       const user = state.participants.get(id);
       if (!user) return;
       state.participants.delete(id);
-      // If the leaving user was the broadcaster, clear remote video state
-      state.remoteVideoActive = false;
-      updateRemoteMediaState();
-      syncRemoteSlotVisibility();               // Fix #2 + #4
-      syncRemoteNameLabel();
       updateViewerCount();
       renderParticipants();
       appendSystemMessage(shell.t('liveRoom.leftMessage', { name: user.name }));
@@ -974,10 +972,10 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     else await startScreenShare();
   });
 
-  // Raise hand
+  // Raise hand (students only)
   el.raiseHand.addEventListener('click', toggleLocalHand);
 
-  // Quality selector — Fix #3
+  // Quality selector
   el.qualityBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const willOpen = !el.qualityWrap.classList.contains('open');
@@ -1012,7 +1010,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     }
   });
 
-  // Reposition quality dropdown if window resizes while open
+  // Reposition quality dropdown on resize
   window.addEventListener('resize', () => {
     if (el.qualityWrap.classList.contains('open')) positionQualityDropdown();
     if (window.innerWidth > 768) shell.closeSidebar();
@@ -1041,23 +1039,18 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // ─────────────────────────────────────────────────────────────
   el.localAvatar.textContent = (userName.charAt(0) || 'S').toUpperCase();
 
-  // Set initial quality label and mark active option
   if (el.qualityLabel) el.qualityLabel.textContent = state.currentQuality;
   document.querySelectorAll('.quality-opt').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.quality === state.currentQuality);
   });
 
-  // Fix #2 + #4: ensure remote slot is hidden on load
-  syncRemoteSlotVisibility();
-
   appendSystemMessage(shell.t('liveRoom.sessionStarted'));
-  updateSessionCopy();       // sets title, calls applyRoleUI()
+  updateSessionCopy();
   updateViewerCount();
   renderParticipants();
   renderHands();
   renderSpeakRequests();
   updateLocalMediaState();
-  updateRemoteMediaState();
   startTimer();
   initSocket();
   initAgora();
