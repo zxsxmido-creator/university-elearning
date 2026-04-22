@@ -23,24 +23,7 @@ connectDB();
 // إعدادات الـ CORS
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 
-// إعدادات الحماية (Helmet) المخصصة لخدمة Agora
-//app.use(
-  //helmet({
-    //contentSecurityPolicy: {
-      //directives: {
-        //defaultSrc: ["'self'"],
-        // السماح بتشغيل أكواد Agora و eval اللازمة لمعالجة الفيديو
-        //scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.agora.io", "*.sdktar.com"],
-        // السماح بالاتصال بسيرفرات Agora للصوت والصورة
-        //connectSrc: ["'self'", "*.agora.io", "*.sdktar.com", "wss://*.agora.io"],
-        // السماح بتحميل الصور والبيانات
-        //imgSrc: ["'self'", "data:", "*.agora.io"],
-        // السماح بتدفق الميديا (الفيديو والصوت)
-        //mediaSrc: ["'self'", "blob:"],
-      //},
-    //},
-  //})
-//);
+app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

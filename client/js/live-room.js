@@ -676,11 +676,12 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         }
       });
 
-      const response = await fetch('/api/live/token', {
+const response = await fetch('/api/live/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer uni-learn-secure-123'
+          // هنا السطر اللي اتغير: بيسحب التوكن الحقيقي بتاع الطالب
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           channelName: channel,
