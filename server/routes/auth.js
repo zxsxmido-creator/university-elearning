@@ -7,7 +7,9 @@ const User = require('../models/User'); // تأكد من مسار الموديل
 // 1. مسار إنشاء حساب جديد (Register)
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    // هنا إحنا مبناخدش الـ role من المستخدم خالص!
+const { name, email, password } = req.body;
+const role = 'student'; // إجباري أي حد بيسجل من بره يبقى طالب
 
     // التأكد إن الإيميل مش متسجل قبل كده
     let user = await User.findOne({ email });
