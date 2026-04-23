@@ -952,4 +952,33 @@ html[dir='rtl'] .notif.fade-out { transform: translateX(-16px); }
   }
 
   html[dir='rtl'] .notification-stack { left: 10px; right: 10px; }
+
+/* التعديلات دي هتشتغل على الموبايل بس */
+    .topbar {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .topbar-meta {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-left: auto !important; /* ده اللي هيزقهم يمين في المربع الأحمر */
+    }
+
+    .session-title {
+        max-width: 120px; /* عشان العنوان مياكلش مساحة الشاشة في الموبايل */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
 }
