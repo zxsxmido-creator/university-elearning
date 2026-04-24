@@ -771,6 +771,12 @@ try {
                     avatar.style.backgroundImage = `url('${data.newImageUrl}')`;
                     avatar.classList.add('is-image');
                 });
+                // تحديث الصورة في ذاكرة المتصفح
+        let currentUser = JSON.parse(localStorage.getItem('user'));
+        if (currentUser) {
+            currentUser.avatar = data.newImageUrl;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+        }
                 alert('عاش! تم تحديث الصورة بنجاح 🚀');
             } else {
                 alert('حصلت مشكلة: ' + data.message);

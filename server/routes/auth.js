@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
     const payload = { user: { id: user.id, name: user.name, role: user.role } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }); 
 
-    res.json({ token, user: { _id: user.id, name: user.name, role: user.role } });
+    res.json({ token, user: { _id: user.id, name: user.name, role: user.role, avatar: user.avatar } });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
@@ -73,7 +73,7 @@ router.post('/login', async (req, res) => {
     const payload = { user: { id: user.id, name: user.name, role: user.role } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    res.json({ token, user: { _id: user.id, name: user.name, role: user.role } });
+    res.json({ token, user: { _id: user.id, name: user.name, role: user.role, avatar: user.avatar } });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
