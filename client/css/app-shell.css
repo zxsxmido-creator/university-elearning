@@ -1021,5 +1021,9 @@ html[dir='rtl'] .profile-identity {
     margin-top: auto;
   }
 }
+/* منع سكرول الصفحة الأساسية لما القائمة الجانبية تكون مفتوحة */
+body.nav-open {
+  overflow: hidden !important;
+}
 
 }
