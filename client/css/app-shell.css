@@ -999,4 +999,26 @@ html[dir='rtl'] .profile-identity {
   .profile-modal-footer-actions {
     justify-content: stretch;
   }
+
+  @media (max-width: 768px) {
+  /* ... بقية أكوادك القديمة زي ما هي ... */
+
+  .sidenav {
+    overflow-y: auto; /* نرجع السكرول للسايد بار كله على الموبايل */
+  }
+
+  .nav-links {
+    flex: 0 0 auto;
+    overflow-y: visible; /* نوقف السكرول الداخلي هنا ونخليه للسايد بار كله */
+  }
+
+  .nav-footer {
+    position: sticky; /* السطر السحري للموبايل */
+    bottom: 0;        /* بيلزقه تحت دايماً */
+    background: var(--ink);
+    z-index: 10;
+    margin-top: auto;
+  }
+}
+
 }
