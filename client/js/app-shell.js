@@ -738,15 +738,29 @@ document.addEventListener('change', async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        // تجهيز الصورة للإرسال
-        const formData = new FormData();
-        formData.append('profileImage', file);
+// تجهيز الصورة للإرسال
+const formData = new FormData();
+formData.append('profileImage', file);
 
-        try {
-          const response = await fetch('/api/auth/update-avatar', {
-                method: 'POST',
-                body: formData
-            });
+// هنجيب بيانات المستخدم والتوكن من المتصفح عشان نثبت هويتنا للسيرفر
+const token = localStorage.getItem('token'); 
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+// بنضيف الـ ID بتاع المستخدم مع الصورة
+if (user._id) {
+    formData.append('userId', user._id);
+}
+
+try {
+    // إرسال الصورة + بيانات المستخدم للسيرفر
+    const response = await fetch('/api/auth/update-avatar', {
+        method: 'POST',
+        headers: {
+            // السطر ده بيبعت التوكن لو السيرفر بتاعك محمي بـ JWT
+            'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: formData
+    });
 
             const data = await response.json();
 
