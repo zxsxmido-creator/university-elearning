@@ -234,10 +234,13 @@
   }
 
   function updateStudyHours() {
-    document.getElementById('studyHoursVal').textContent = shell.t('dashboard.studyHoursFormat', {
-      hours: state.studyHours.hours,
-      minutes: String(state.studyHours.minutes).padStart(2, '0')
+    const studyHoursElem = document.getElementById('studyHoursVal');
+if (studyHoursElem) {
+    studyHoursElem.textContent = shell.t('dashboard.studyHoursFormat', {
+        hours: state.studyHours.hours,
+        minutes: String(state.studyHours.minutes).padStart(2, '0')
     });
+}
   }
 
   function renderSchedule() {
