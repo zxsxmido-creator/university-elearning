@@ -14,18 +14,21 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// 2. إعداد التخزين السحابي
+// 2. إعداد التخزين السحابي (مع الضغط التلقائي)
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'university_avatars', // الفولدر اللي هيتعمل على كلاوديناري
+    folder: 'university_avatars',
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    // السطر السحري: هيضغط أي صورة كبيرة ويقلل مساحتها مع الحفاظ على جودتها
+    transformation: [{ width: 800, height: 800, crop: 'limit' }, { quality: 'auto' }] 
   },
 });
 
+// السماح باستقبال ملفات لحد 50 ميجا من الموبايل
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // السماح بصور لحد 10 ميجا
+    limits: { fileSize: 50 * 1024 * 1024 } 
 });
 // ==========================================
 // مساراتك القديمة (تسجيل الدخول والإنشاء)
