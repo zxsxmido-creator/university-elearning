@@ -2,14 +2,18 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer'); // إضافة مكتبة رفع الملفات
 const User = require('../models/User'); // تأكد من مسار الموديل بتاعك
+
+// إعداد مكان حفظ الصور مؤقتاً في فولدر uploads
+const upload = multer({ dest: 'uploads/' }); 
 
 // 1. مسار إنشاء حساب جديد (Register)
 router.post('/register', async (req, res) => {
   try {
     // هنا إحنا مبناخدش الـ role من المستخدم خالص!
-const { name, email, password } = req.body;
-const role = 'student'; // إجباري أي حد بيسجل من بره يبقى طالب
+    const { name, email, password } = req.body;
+    const role = 'student'; // إجباري أي حد بيسجل من بره يبقى طالب
 
     // التأكد إن الإيميل مش متسجل قبل كده
     let user = await User.findOne({ email });
@@ -61,6 +65,31 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
+  }
+});
+
+// 3. المسار الجديد: تحديث الصورة الشخصية (Update Avatar)
+router.post('/update-avatar', upload.single('profileImage'), async (req, res) => {
+  try {
+    // 1. بناخد مسار الصورة الجديد
+    const imageUrl = `/uploads/${req.file.filename}`;
+    
+    // 2. بنجيب الـ ID بتاع اليوزر من الـ Request
+    const userId = req.body.userId || req.user?.id; 
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'معرف المستخدم غير موجود' });
+    }
+
+    // 3. بنعمل تحديث لحقل الـ avatar في الداتا بيز
+    await User.findByIdAndUpdate(userId, { avatar: imageUrl });
+
+    // 4. بنرد على المتصفح بالنجاح والرابط الجديد
+    res.json({ success: true, newImageUrl: imageUrl });
+
+  } catch (error) {
+    console.error("Error updating avatar:", error);
+    res.status(500).json({ success: false, message: 'حدث خطأ في السيرفر أثناء الرفع' });
   }
 });
 

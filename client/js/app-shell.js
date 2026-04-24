@@ -731,4 +731,41 @@
     escapeHtml,
     setAvatarContent
   };
+  // كود رفع الصورة الشخصية (يعمل مع العناصر الديناميكية)
+document.addEventListener('change', async (event) => {
+    // نتأكد إن الحدث حصل على زرار الصورة بتاعنا بالظبط
+    if (event.target && event.target.id === 'profileAvatarInput') {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // تجهيز الصورة للإرسال
+        const formData = new FormData();
+        formData.append('profileImage', file);
+
+        try {
+            // إرسال الصورة للسيرفر
+            const response = await fetch('/update-avatar', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // تحديث الصورة في الشاشة فوراً
+                const avatars = document.querySelectorAll('.user-avatar, .profile-avatar-preview');
+                avatars.forEach(avatar => {
+                    avatar.style.backgroundImage = `url('${data.newImageUrl}')`;
+                    avatar.classList.add('is-image');
+                });
+                alert('عاش! تم تحديث الصورة بنجاح 🚀');
+            } else {
+                alert('حصلت مشكلة: ' + data.message);
+            }
+        } catch (error) {
+            console.error('خطأ أثناء رفع الصورة:', error);
+            alert('حدث خطأ في الاتصال بالسيرفر.');
+        }
+    }
+});
 })();
