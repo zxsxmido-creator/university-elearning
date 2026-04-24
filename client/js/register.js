@@ -37,6 +37,7 @@
         localStorage.setItem('token', data.token);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userRole', data.user.role); // هترجع من السيرفر كـ student
+        localStorage.setItem('user', JSON.stringify(data.user));
 
         // ضبط اللغة الافتراضية
         if (!localStorage.getItem('userLanguage')) {
