@@ -743,8 +743,7 @@ document.addEventListener('change', async (event) => {
         formData.append('profileImage', file);
 
         try {
-            // إرسال الصورة للسيرفر
-            const response = await fetch('/update-avatar', {
+          const response = await fetch('/api/auth/update-avatar', {
                 method: 'POST',
                 body: formData
             });
