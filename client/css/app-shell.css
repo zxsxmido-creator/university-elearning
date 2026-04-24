@@ -83,7 +83,8 @@ a {
   inset: 0 auto 0 0;
   z-index: 50;
   width: var(--nav-width);
-  min-height: 100vh;
+  height: 100%;      /* ده عشان المتصفحات القديمة */
+height: 100dvh;    /* ده السطر السحري للموبايلات الحديثة */
   display: flex;
   flex-direction: column;
   background: var(--ink);
