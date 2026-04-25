@@ -42,13 +42,15 @@ connectDB();
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 
 // تفعيل حماية الـ CSP لمنع الـ XSS
+// تفعيل حماية الـ CSP لمنع الـ XSS مع السماح لسيرفرات البث
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https://download.agora.io', 'https://cdnjs.cloudflare.com'],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://download.agora.io', 'https://cdnjs.cloudflare.com'],
       mediaSrc: ["'self'", 'blob:'],
-      connectSrc: ["'self'", 'wss:', 'https://api.agora.io', `wss://${allowedOrigin.replace(/^https?:\/\//, '')}`],
+      // وسعنا النطاق هنا عشان Agora و Socket يشتغلوا براحتهم
+      connectSrc: ["'self'", 'wss:', 'https://*', 'wss://*'],
       imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
