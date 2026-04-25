@@ -1,4 +1,19 @@
 (() => {
+  (() => {
+    // حارس الأمن: لو مفيش توكن، اطرد المستخدم لصفحة اللوجين
+    const token = localStorage.getItem('token');
+    if (!token && !window.location.pathname.includes('login.html') && !window.location.pathname.includes('register.html')) {
+        window.location.href = 'login.html';
+    }
+
+    const STORAGE_KEYS = {
+        name: 'userName',
+        role: 'userRole',
+        avatar: 'userAvatar',
+        language: 'userLanguage'
+    };
+    
+    // ... وباقي الكود بتاعك مكمل زي ما هو لتحت
   const STORAGE_KEYS = {
     name: 'userName',
     role: 'userRole',
