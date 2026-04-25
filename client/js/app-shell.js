@@ -783,6 +783,7 @@ try {
         if (currentUser) {
             currentUser.avatar = data.newImageUrl;
             localStorage.setItem('user', JSON.stringify(currentUser));
+            localStorage.setItem('userAvatar', data.newImageUrl);
         }
                 alert('عاش! تم تحديث الصورة بنجاح 🚀');
             } else {
