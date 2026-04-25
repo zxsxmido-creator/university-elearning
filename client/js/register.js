@@ -37,7 +37,12 @@
         localStorage.setItem('token', data.token);
         localStorage.setItem('userName', data.user.name);
         localStorage.setItem('userRole', data.user.role); // هترجع من السيرفر كـ student
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user', JSON.stringify({
+  _id:    data.user._id,
+  name:   data.user.name,
+  role:   data.user.role,
+  avatar: data.user.avatar || ''
+}));
         if(data.user.avatar) {
     localStorage.setItem('userAvatar', data.user.avatar);
 }

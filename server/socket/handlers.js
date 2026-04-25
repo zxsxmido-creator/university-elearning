@@ -2,13 +2,13 @@ const rooms = new Map();
 
 module.exports = (io) => {
   io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}`);
-
+    
     socket.on('join-room', ({ roomId, user }) => {
       socket.join(roomId);
       if (!rooms.has(roomId)) rooms.set(roomId, { users: [], raisedHands: [] });
 
       const room = rooms.get(roomId);
+      // بنحفظ الـ role هنا عشان نتأكد منها وقت الطلبات
       room.users.push({ id: socket.id, ...user });
 
       io.to(roomId).emit('room-users', room.users);
@@ -34,24 +34,45 @@ module.exports = (io) => {
       io.to(roomId).emit('raised-hands', room.raisedHands);
     });
 
-    // 👇 الإضافة الجديدة الخاصة بطلب فتح المايك 👇
-    socket.on('speak-request', ({ roomId, user }) => {
-      // إرسال الطلب لكل الناس في الغرفة (والأدمن هيستقبله في الواجهة)
-      socket.to(roomId).emit('speak-request', { id: socket.id, user });
+    socket.on('speak-request', ({ roomId }) => {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      
+      const sender = room.users.find(u => u.id === socket.id);
+      // تأمين: المدرس مش محتاج يبعت طلب كلام
+      if (!sender || sender.role === 'instructor' || sender.role === 'admin') return;
+      
+      socket.to(roomId).emit('speak-request', { id: socket.id, user: { name: sender.name, role: sender.role } });
     });
-    // 👆 نهاية الإضافة 👆
 
     socket.on('instructor-signal', ({ roomId, type, targetId, data }) => {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      
+      const sender = room.users.find(u => u.id === socket.id);
+      // تأمين: المدرس فقط هو من يرسل الإشارات للطلاب
+      if (!sender || (sender.role !== 'instructor' && sender.role !== 'admin')) return;
+      
       io.to(roomId).emit('instructor-signal', { type, senderId: socket.id, targetId, data });
     });
 
     socket.on('disconnect', () => {
       rooms.forEach((room, roomId) => {
+        const wasPresent = room.users.some(u => u.id === socket.id);
+        if (!wasPresent) return;
+
         room.users = room.users.filter(u => u.id !== socket.id);
         room.raisedHands = room.raisedHands.filter(h => h.id !== socket.id);
+        
         io.to(roomId).emit('user-left', { id: socket.id });
-        io.to(roomId).emit('room-users', room.users);
-        io.to(roomId).emit('raised-hands', room.raisedHands);
+
+        // تدمير الغرفة لو فضيت لتوفير الرامات
+        if (room.users.length === 0) {
+          rooms.delete(roomId);
+        } else {
+          io.to(roomId).emit('room-users', room.users);
+          io.to(roomId).emit('raised-hands', room.raisedHands);
+        }
       });
     });
   });

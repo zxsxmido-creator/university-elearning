@@ -632,8 +632,9 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // AGORA INIT
   // ─────────────────────────────────────────────────────────────
   async function initAgora() {
-    if (typeof AgoraRTC === 'undefined' || !window.AGORA_APP_ID) return;
-
+    if (typeof AgoraRTC === 'undefined' || !window.AGORA_APP_ID) {
+      pushNotification('Video SDK unavailable.', ''); return;
+    }
     try {
       state.agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
       await state.agoraClient.setClientRole(isInstructor ? 'host' : 'audience');
@@ -717,7 +718,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       }
 
     } catch (err) {
-      console.warn('[Agora] Initialization failed:', err);
+      console.warn('[Agora] Initialization failed:', err.message);
+      pushNotification('Could not connect to video service. Please refresh.', '');
     }
   }
 
