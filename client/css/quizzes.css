@@ -317,6 +317,9 @@
 
 .quiz-modal {
   width: min(100%, 720px);
+  max-height: 90vh; /* تحديد أقصى طول للنافذة */
+  display: flex; /* تحويلها لـ Flexbox عشان نفصل الهيدر والفوتر */
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 22px;
@@ -331,6 +334,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 22px 24px;
+  flex-shrink: 0; /* منع الهيدر والفوتر من الانكماش */
 }
 
 .quiz-modal-header {
@@ -369,6 +373,7 @@
 .quiz-progress-track {
   height: 6px;
   background: rgba(26, 20, 16, 0.08);
+  flex-shrink: 0;
 }
 
 .quiz-progress-fill {
@@ -382,6 +387,20 @@
   padding: 24px;
   display: grid;
   gap: 18px;
+  overflow-y: auto; /* تفعيل السكرول هنا فقط */
+}
+
+/* --- تصميم السكرول بار الاحترافي --- */
+.quiz-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.quiz-modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+}
+.quiz-modal-body::-webkit-scrollbar-thumb {
+  background-color: var(--red);
+  border-radius: 10px;
 }
 
 .quiz-step-count {
