@@ -496,7 +496,382 @@
     renderMaterials();
   });
 
+  const curriculumBaseOpenModal = openModal;
+  const curriculumBaseUpdateModalNav = updateModalNav;
+
+  function ensureCmsStyles() {
+    if (document.getElementById('unilearnCmsInlineStyles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'unilearnCmsInlineStyles';
+    style.textContent = `
+      .cms-admin-panel {
+        margin-bottom: 24px;
+        padding: 18px;
+        border: 1px solid var(--border-hi);
+        border-radius: var(--radius-lg);
+        background: var(--panel);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .cms-admin-head,
+      .cms-admin-actions,
+      .cms-admin-grid,
+      .cms-admin-grid-two {
+        display: flex;
+        gap: 12px;
+      }
+
+      .cms-admin-head {
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .cms-admin-grid {
+        flex-wrap: wrap;
+      }
+
+      .cms-admin-grid-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cms-admin-copy {
+        display: grid;
+        gap: 6px;
+      }
+
+      .cms-admin-kicker {
+        color: var(--text-muted);
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .cms-admin-title {
+        color: var(--text-primary);
+        font-family: var(--serif);
+        font-size: 20px;
+        font-style: italic;
+      }
+
+      .cms-admin-note {
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .cms-admin-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .cms-admin-form[hidden] {
+        display: none;
+      }
+
+      .cms-field {
+        display: grid;
+        gap: 6px;
+        flex: 1 1 180px;
+      }
+
+      .cms-field label {
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .cms-field input,
+      .cms-field textarea,
+      .cms-field select {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        border: 1px solid var(--border-mid);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-primary);
+        outline: none;
+      }
+
+      .cms-field textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      .cms-field input:focus,
+      .cms-field textarea:focus,
+      .cms-field select:focus {
+        border-color: var(--mint);
+        box-shadow: 0 0 0 3px var(--mint-pale);
+      }
+
+      .cms-admin-status {
+        min-height: 18px;
+        color: var(--text-secondary);
+        font-size: 11px;
+      }
+
+      @media (max-width: 768px) {
+        .cms-admin-head,
+        .cms-admin-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .cms-admin-grid-two {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  function isAdminUser() {
+    return localStorage.getItem('userRole') === 'admin';
+  }
+
+  function resetCurriculumCollections() {
+    CATEGORIES.splice(0, CATEGORIES.length);
+    Object.keys(CURRICULUM).forEach((key) => delete CURRICULUM[key]);
+  }
+
+  function normalizeCurriculumWeek(week) {
+    const items = Array.isArray(week?.items) ? week.items : [];
+    const normalizedItems = items.map((item) => ({
+      id: String(item.id || item._id || `${Date.now()}-${Math.random()}`),
+      title: item.title || 'Untitled PDF',
+      type: 'pdf',
+      pages: Number(item.pages) || 0,
+      size: item.size || item.sizeLabel || '',
+      done: Boolean(item.done),
+      fileUrl: item.fileUrl || item.downloadUrl || '',
+      fileName: item.fileName || ''
+    }));
+
+    const completedCount = normalizedItems.filter((item) => item.done).length;
+    const progress = normalizedItems.length ? Math.round((completedCount / normalizedItems.length) * 100) : 0;
+
+    return {
+      week: Number(week?.week) || 1,
+      title: week?.title || `Week ${Number(week?.week) || 1}`,
+      progress: Number.isFinite(Number(week?.progress)) ? Number(week.progress) : progress,
+      items: normalizedItems
+    };
+  }
+
+  function mergeCurriculumPayload(payload) {
+    resetCurriculumCollections();
+
+    const safeCategories = Array.isArray(payload?.categories) ? payload.categories : [];
+    safeCategories.forEach((category) => {
+      CATEGORIES.push({
+        id: category.id,
+        code: category.code || 'GEN',
+        dot: category.dot || '#00e5a0',
+        color: category.color || '#00e5a0',
+        name: category.name || { en: category.id, ar: category.id },
+        desc: category.desc || { en: '', ar: '' },
+        weeks: Number(category.weeks) || 0,
+        materials: Number(category.materials) || 0
+      });
+    });
+
+    if (payload?.curriculum && typeof payload.curriculum === 'object') {
+      Object.entries(payload.curriculum).forEach(([categoryId, weeks]) => {
+        CURRICULUM[categoryId] = Array.isArray(weeks) ? weeks.map(normalizeCurriculumWeek) : [];
+      });
+    }
+
+    if (activeCatId !== 'all' && !CURRICULUM[activeCatId]) {
+      activeCatId = 'all';
+    }
+  }
+
+  function syncCurriculumModal(item) {
+    const modalBody = document.getElementById('modalBody');
+    const modalDlBtn = document.getElementById('modalDlBtn');
+
+    if (item?.fileUrl) {
+      modalDlBtn.href = item.fileUrl;
+      modalDlBtn.setAttribute('target', '_blank');
+      modalDlBtn.setAttribute('rel', 'noopener');
+      modalBody.innerHTML = `
+        <div class="modal-placeholder">
+          <div class="icon">P</div>
+          <p>PDF uploaded and ready.</p>
+          <p style="font-size:11px">Use the download button below to open the current file in a new tab.</p>
+        </div>
+      `;
+      return;
+    }
+
+    modalDlBtn.href = '#';
+    modalDlBtn.removeAttribute('target');
+    modalDlBtn.removeAttribute('rel');
+    modalBody.innerHTML = `
+      <div class="modal-placeholder">
+        <div class="icon">P</div>
+        <p data-i18n="curriculum.previewUnavailable">${shell.t('curriculum.previewUnavailable')}</p>
+        <p style="font-size:11px" data-i18n-html="curriculum.previewHint">${shell.t('curriculum.previewHint')}</p>
+      </div>
+    `;
+  }
+
+  openModal = function patchedOpenModal(item) {
+    curriculumBaseOpenModal(item);
+    syncCurriculumModal(item);
+  };
+
+  updateModalNav = function patchedUpdateModalNav() {
+    curriculumBaseUpdateModalNav();
+    syncCurriculumModal(modalItems[modalIndex]);
+  };
+
+  function renderCurriculumAdminPanel() {
+    if (!isAdminUser() || document.getElementById('curriculumCmsPanel')) return;
+
+    ensureCmsStyles();
+
+    const panel = document.createElement('section');
+    panel.id = 'curriculumCmsPanel';
+    panel.className = 'cms-admin-panel';
+    panel.innerHTML = `
+      <div class="cms-admin-head">
+        <div class="cms-admin-copy">
+          <span class="cms-admin-kicker">Admin CMS</span>
+          <h2 class="cms-admin-title">Upload Curriculum PDF</h2>
+          <p class="cms-admin-note">Add a PDF directly into the curriculum view without disturbing the existing page layout.</p>
+        </div>
+        <div class="cms-admin-actions">
+          <button class="secondary-btn" id="curriculumCmsToggle" type="button">Add PDF</button>
+        </div>
+      </div>
+      <form class="cms-admin-form" id="curriculumCmsForm" hidden>
+        <div class="cms-admin-grid">
+          <div class="cms-field">
+            <label for="curriculumSubject">Subject Name</label>
+            <input id="curriculumSubject" name="subject" type="text" required>
+          </div>
+          <div class="cms-field">
+            <label for="curriculumSubjectCode">Subject Code</label>
+            <input id="curriculumSubjectCode" name="subjectCode" type="text" placeholder="CS101" required>
+          </div>
+          <div class="cms-field">
+            <label for="curriculumWeekNumber">Week Number</label>
+            <input id="curriculumWeekNumber" name="weekNumber" type="number" min="1" value="1" required>
+          </div>
+          <div class="cms-field">
+            <label for="curriculumPages">Pages</label>
+            <input id="curriculumPages" name="pages" type="number" min="0" value="0">
+          </div>
+        </div>
+        <div class="cms-admin-grid-two">
+          <div class="cms-field">
+            <label for="curriculumWeekTitle">Week Title</label>
+            <input id="curriculumWeekTitle" name="weekTitle" type="text" placeholder="Week 1 Materials" required>
+          </div>
+          <div class="cms-field">
+            <label for="curriculumSizeLabel">File Size Label</label>
+            <input id="curriculumSizeLabel" name="sizeLabel" type="text" placeholder="2.3 MB">
+          </div>
+        </div>
+        <div class="cms-field">
+          <label for="curriculumSubjectDescription">Subject Description</label>
+          <textarea id="curriculumSubjectDescription" name="subjectDescription" placeholder="Short summary for the subject hero card."></textarea>
+        </div>
+        <div class="cms-field">
+          <label for="curriculumTitle">Material Title</label>
+          <input id="curriculumTitle" name="title" type="text" required>
+        </div>
+        <div class="cms-field">
+          <label for="curriculumPdfFile">PDF File</label>
+          <input id="curriculumPdfFile" name="pdfFile" type="file" accept="application/pdf" required>
+        </div>
+        <div class="cms-admin-actions">
+          <button class="primary-btn" id="curriculumCmsSubmit" type="submit">Upload PDF</button>
+        </div>
+        <div class="cms-admin-status" id="curriculumCmsStatus"></div>
+      </form>
+    `;
+
+    const anchor = document.getElementById('catHero');
+    document.querySelector('.materials-area').insertBefore(panel, anchor);
+
+    const toggleButton = document.getElementById('curriculumCmsToggle');
+    const form = document.getElementById('curriculumCmsForm');
+    const status = document.getElementById('curriculumCmsStatus');
+    const submitButton = document.getElementById('curriculumCmsSubmit');
+
+    toggleButton.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      toggleButton.textContent = form.hidden ? 'Add PDF' : 'Hide Form';
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        status.textContent = 'Missing auth token.';
+        return;
+      }
+
+      submitButton.disabled = true;
+      status.textContent = 'Uploading PDF...';
+
+      try {
+        const response = await fetch('/api/courses/curriculum', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: new FormData(form)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.msg || 'Upload failed');
+        }
+
+        form.reset();
+        form.hidden = true;
+        toggleButton.textContent = 'Add PDF';
+        status.textContent = 'PDF uploaded successfully.';
+        await loadCurriculumCms();
+      } catch (error) {
+        status.textContent = error.message || 'Upload failed.';
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  }
+
+  async function loadCurriculumCms() {
+    try {
+      const response = await fetch('/api/courses/curriculum');
+
+      if (!response.ok) {
+        throw new Error('Failed to load curriculum');
+      }
+
+      const payload = await response.json();
+      mergeCurriculumPayload(payload);
+      renderCatList();
+      renderMaterials();
+    } catch (error) {
+      console.error('Curriculum CMS load failed:', error);
+    }
+  }
+
+  renderCurriculumAdminPanel();
   renderCatList();
   renderMaterials();
   syncViewMode();
+  loadCurriculumCms();
 })();

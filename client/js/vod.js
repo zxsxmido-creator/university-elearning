@@ -797,5 +797,403 @@
   document.getElementById('filterWatched').checked = state.filterShowWatched;
   document.getElementById('filterNew').checked = state.filterNewOnly;
   durationRange.value = String(state.filterMaxDuration);
+
+  const vodBaseGetSubjectLabel = getSubjectLabel;
+  const vodBaseGetInstructorLabel = getInstructorLabel;
+  const vodBaseUpdatePlayerScreen = updatePlayerScreen;
+
+  function ensureCmsStyles() {
+    if (document.getElementById('unilearnCmsInlineStyles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'unilearnCmsInlineStyles';
+    style.textContent = `
+      .cms-admin-panel {
+        margin-bottom: 24px;
+        padding: 18px;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-lg);
+        background: #fff;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .cms-admin-head,
+      .cms-admin-actions,
+      .cms-admin-grid,
+      .cms-admin-grid-two {
+        display: flex;
+        gap: 12px;
+      }
+
+      .cms-admin-head {
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+
+      .cms-admin-grid {
+        flex-wrap: wrap;
+      }
+
+      .cms-admin-grid-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cms-admin-copy {
+        display: grid;
+        gap: 6px;
+      }
+
+      .cms-admin-kicker {
+        color: var(--ink-soft);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .cms-admin-title {
+        color: var(--ink);
+        font-family: var(--display);
+        font-size: 22px;
+        letter-spacing: 1.3px;
+      }
+
+      .cms-admin-note {
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .cms-admin-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .cms-admin-form[hidden] {
+        display: none;
+      }
+
+      .cms-field {
+        display: grid;
+        gap: 6px;
+        flex: 1 1 180px;
+      }
+
+      .cms-field label {
+        color: var(--ink-mid);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .cms-field input,
+      .cms-field textarea {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        border: 1px solid var(--border-mid);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--ink);
+        outline: none;
+      }
+
+      .cms-field textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      .cms-field input:focus,
+      .cms-field textarea:focus {
+        border-color: var(--red);
+        box-shadow: 0 0 0 3px var(--red-pale);
+      }
+
+      .cms-admin-status {
+        min-height: 18px;
+        color: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      @media (max-width: 768px) {
+        .cms-admin-head,
+        .cms-admin-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .cms-admin-grid-two {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  function isAdminUser() {
+    return localStorage.getItem('userRole') === 'admin';
+  }
+
+  function slugify(value) {
+    return String(value || 'item')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'item';
+  }
+
+  function getLookupLabel(collection, id, fallback) {
+    const entry = collection.find((item) => item.id === id);
+    if (entry?.translationKey) return shell.t(entry.translationKey);
+    if (entry?.label) return entry.label;
+    return fallback;
+  }
+
+  getSubjectLabel = function patchedGetSubjectLabel(subjectId) {
+    return getLookupLabel(SUBJECTS, subjectId, vodBaseGetSubjectLabel(subjectId));
+  };
+
+  getInstructorLabel = function patchedGetInstructorLabel(instructorId) {
+    return getLookupLabel(INSTRUCTORS, instructorId, vodBaseGetInstructorLabel(instructorId));
+  };
+
+  updatePlayerScreen = function patchedUpdatePlayerScreen() {
+    const lecture = getLecture(state.currentLectureId);
+    if (!lecture || !lecture.videoUrl) {
+      vodBaseUpdatePlayerScreen();
+      return;
+    }
+
+    playerTitle.textContent = pick(lecture.title);
+    playerTotal.textContent = formatPlayerTime(lecture.durationSeconds);
+    speedBtn.textContent = shell.t('vod.speedLabel', { value: PLAYBACK_SPEEDS[state.playbackRateIndex] });
+    playerScreen.innerHTML = `
+      <div class="player-poster">
+        <span class="player-code">${escape(lecture.code)}</span>
+        <h2 class="player-poster-title">${escape(pick(lecture.title))}</h2>
+        <p class="player-poster-desc">${escape(pick(lecture.description))}</p>
+        <div class="player-poster-meta">
+          <span>${escape(getSubjectLabel(lecture.subject))}</span>
+          <span>${escape(getInstructorLabel(lecture.instructor))}</span>
+          <span>${formatDuration(lecture.durationSeconds)}</span>
+        </div>
+        <div class="player-demo-copy">
+          <strong>${lecture.sourceType === 'link' ? 'External lecture link' : 'Uploaded lecture video'}</strong>
+          <span>Open the lecture source in a new tab from the button below.</span>
+        </div>
+        <div class="quiz-footer-actions" style="justify-content:center;">
+          <a class="primary-btn" href="${escape(lecture.videoUrl)}" target="_blank" rel="noopener">Open Video</a>
+        </div>
+      </div>
+    `;
+  };
+
+  function resetLectureCollections() {
+    SUBJECTS.splice(0, SUBJECTS.length, { id: 'all', translationKey: 'vod.subjects.all' });
+    INSTRUCTORS.splice(0, INSTRUCTORS.length, { id: 'all', translationKey: 'vod.instructors.all' });
+    LECTURES.splice(0, LECTURES.length);
+  }
+
+  function normalizeLectureRecord(lecture) {
+    const subjectLabel = lecture.subjectLabel || lecture.subjectName || lecture.subject || 'General';
+    const instructorLabel = lecture.instructorLabel || lecture.instructorName || lecture.instructor || 'Instructor';
+    const subjectId = lecture.subject || slugify(subjectLabel);
+    const instructorId = lecture.instructor || slugify(instructorLabel);
+
+    return {
+      id: String(lecture.id || lecture._id || `${Date.now()}-${Math.random()}`),
+      code: lecture.code || 'LEC',
+      title: lecture.title || { en: lecture.name || 'Recorded Lecture', ar: lecture.name || 'Recorded Lecture' },
+      description: lecture.description || { en: '', ar: '' },
+      subject: subjectId,
+      subjectLabel,
+      instructor: instructorId,
+      instructorLabel,
+      durationSeconds: Number(lecture.durationSeconds) || (Number(lecture.durationMinutes) || 0) * 60,
+      views: Number(lecture.views) || 0,
+      watched: Boolean(lecture.watched),
+      isNew: typeof lecture.isNew === 'boolean' ? lecture.isNew : true,
+      progress: Number(lecture.progress) || 0,
+      date: lecture.date || lecture.createdAt || new Date().toISOString(),
+      videoUrl: lecture.videoUrl || '',
+      sourceType: lecture.sourceType || (lecture.videoUrl ? 'upload' : 'link')
+    };
+  }
+
+  function mergeLecturesPayload(payload) {
+    resetLectureCollections();
+
+    const subjectMap = new Map();
+    const instructorMap = new Map();
+    const safeLectures = Array.isArray(payload?.lectures) ? payload.lectures : [];
+
+    safeLectures.forEach((lecture) => {
+      const normalizedLecture = normalizeLectureRecord(lecture);
+
+      if (!subjectMap.has(normalizedLecture.subject)) {
+        subjectMap.set(normalizedLecture.subject, {
+          id: normalizedLecture.subject,
+          translationKey: normalizedLecture.subjectLabel,
+          label: normalizedLecture.subjectLabel
+        });
+      }
+
+      if (!instructorMap.has(normalizedLecture.instructor)) {
+        instructorMap.set(normalizedLecture.instructor, {
+          id: normalizedLecture.instructor,
+          translationKey: normalizedLecture.instructorLabel,
+          label: normalizedLecture.instructorLabel
+        });
+      }
+
+      LECTURES.push(normalizedLecture);
+    });
+
+    SUBJECTS.push(...subjectMap.values());
+    INSTRUCTORS.push(...instructorMap.values());
+  }
+
+  function renderVodAdminPanel() {
+    if (!isAdminUser() || document.getElementById('vodCmsPanel')) return;
+
+    ensureCmsStyles();
+
+    const panel = document.createElement('section');
+    panel.id = 'vodCmsPanel';
+    panel.className = 'cms-admin-panel';
+    panel.innerHTML = `
+      <div class="cms-admin-head">
+        <div class="cms-admin-copy">
+          <span class="cms-admin-kicker">Admin CMS</span>
+          <h2 class="cms-admin-title">Add Recorded Lecture</h2>
+          <p class="cms-admin-note">Upload a video file or attach an external video link for students to browse from the current lectures page.</p>
+        </div>
+        <div class="cms-admin-actions">
+          <button class="secondary-btn" id="vodCmsToggle" type="button">Add Lecture</button>
+        </div>
+      </div>
+      <form class="cms-admin-form" id="vodCmsForm" hidden>
+        <div class="cms-admin-grid">
+          <div class="cms-field">
+            <label for="vodSubject">Subject Name</label>
+            <input id="vodSubject" name="subject" type="text" required>
+          </div>
+          <div class="cms-field">
+            <label for="vodSubjectCode">Subject Code</label>
+            <input id="vodSubjectCode" name="subjectCode" type="text" placeholder="CS101" required>
+          </div>
+          <div class="cms-field">
+            <label for="vodInstructor">Instructor</label>
+            <input id="vodInstructor" name="instructor" type="text" required>
+          </div>
+          <div class="cms-field">
+            <label for="vodDurationMinutes">Duration (minutes)</label>
+            <input id="vodDurationMinutes" name="durationMinutes" type="number" min="0" value="45">
+          </div>
+        </div>
+        <div class="cms-field">
+          <label for="vodTitle">Lecture Title</label>
+          <input id="vodTitle" name="title" type="text" required>
+        </div>
+        <div class="cms-field">
+          <label for="vodDescription">Description</label>
+          <textarea id="vodDescription" name="description" placeholder="What the lecture covers."></textarea>
+        </div>
+        <div class="cms-admin-grid-two">
+          <div class="cms-field">
+            <label for="vodVideoFile">Video File</label>
+            <input id="vodVideoFile" name="videoFile" type="file" accept="video/*">
+          </div>
+          <div class="cms-field">
+            <label for="vodVideoLink">Video Link</label>
+            <input id="vodVideoLink" name="videoLink" type="url" placeholder="https://...">
+          </div>
+        </div>
+        <div class="cms-admin-actions">
+          <button class="primary-btn" id="vodCmsSubmit" type="submit">Save Lecture</button>
+        </div>
+        <div class="cms-admin-status" id="vodCmsStatus"></div>
+      </form>
+    `;
+
+    vodArea.insertBefore(panel, featuredStrip);
+
+    const toggleButton = document.getElementById('vodCmsToggle');
+    const form = document.getElementById('vodCmsForm');
+    const status = document.getElementById('vodCmsStatus');
+    const submitButton = document.getElementById('vodCmsSubmit');
+
+    toggleButton.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      toggleButton.textContent = form.hidden ? 'Add Lecture' : 'Hide Form';
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        status.textContent = 'Missing auth token.';
+        return;
+      }
+
+      const fileInput = document.getElementById('vodVideoFile');
+      const linkInput = document.getElementById('vodVideoLink');
+      if (!fileInput.files.length && !linkInput.value.trim()) {
+        status.textContent = 'Attach a video file or paste a video link.';
+        return;
+      }
+
+      submitButton.disabled = true;
+      status.textContent = 'Saving lecture...';
+
+      try {
+        const response = await fetch('/api/lectures/library', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: new FormData(form)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.msg || 'Lecture save failed');
+        }
+
+        form.reset();
+        form.hidden = true;
+        toggleButton.textContent = 'Add Lecture';
+        status.textContent = 'Lecture saved successfully.';
+        await loadLecturesCms();
+      } catch (error) {
+        status.textContent = error.message || 'Lecture save failed.';
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  }
+
+  async function loadLecturesCms() {
+    try {
+      const response = await fetch('/api/lectures/library');
+
+      if (!response.ok) {
+        throw new Error('Failed to load lectures');
+      }
+
+      const payload = await response.json();
+      mergeLecturesPayload(payload);
+      state.currentPage = 1;
+      renderAll();
+    } catch (error) {
+      console.error('Lecture CMS load failed:', error);
+    }
+  }
+
+  renderVodAdminPanel();
   renderAll();
+  loadLecturesCms();
 })();

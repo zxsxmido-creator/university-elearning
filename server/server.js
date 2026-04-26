@@ -66,6 +66,7 @@ app.use(express.static(path.join(__dirname, '../client')));
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/lectures', require('./routes/lectures'));
+app.use('/api/quizzes', require('./routes/quizzes'));
 app.use('/api/live', require('./routes/live'));
 // ==========================================
 // توجيه الروابط النظيفة (Clean URLs Mapping)

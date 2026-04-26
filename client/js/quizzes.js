@@ -740,5 +740,434 @@
   window.addEventListener('unilearn:language-changed', renderAll);
   window.addEventListener('unilearn:profile-updated', renderAll);
 
+  function ensureCmsStyles() {
+    if (document.getElementById('unilearnCmsInlineStyles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'unilearnCmsInlineStyles';
+    style.textContent = `
+      .cms-admin-panel {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 18px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: #fff;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .cms-admin-head,
+      .cms-admin-actions,
+      .cms-admin-grid,
+      .cms-admin-grid-two {
+        display: flex;
+        gap: 12px;
+      }
+
+      .cms-admin-head {
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      .cms-admin-grid {
+        flex-wrap: wrap;
+      }
+
+      .cms-admin-grid-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cms-admin-copy {
+        display: grid;
+        gap: 6px;
+      }
+
+      .cms-admin-kicker {
+        color: var(--ink-faint);
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .cms-admin-title {
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: 24px;
+        font-style: italic;
+      }
+
+      .cms-admin-note {
+        color: var(--ink-light);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .cms-admin-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .cms-admin-form[hidden] {
+        display: none;
+      }
+
+      .cms-field {
+        display: grid;
+        gap: 6px;
+        flex: 1 1 180px;
+      }
+
+      .cms-field label {
+        color: var(--ink-light);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .cms-field input,
+      .cms-field textarea,
+      .cms-field select {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--ink);
+        outline: none;
+      }
+
+      .cms-field textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      .cms-field input:focus,
+      .cms-field textarea:focus,
+      .cms-field select:focus {
+        border-color: var(--red);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .cms-question-card {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(245, 240, 232, 0.42);
+      }
+
+      .cms-question-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .cms-question-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .cms-question-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .cms-admin-status {
+        min-height: 18px;
+        color: var(--ink-light);
+        font-size: 11px;
+      }
+
+      @media (max-width: 768px) {
+        .cms-admin-head,
+        .cms-admin-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .cms-admin-grid-two,
+        .cms-question-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  function isAdminUser() {
+    return localStorage.getItem('userRole') === 'admin';
+  }
+
+  function createEmptyQuestion() {
+    return {
+      prompt: '',
+      options: ['', '', '', ''],
+      answer: 0
+    };
+  }
+
+  function normalizeQuizRecord(quiz) {
+    const dueText = typeof quiz.dueDate === 'string'
+      ? quiz.dueDate.slice(0, 10)
+      : (typeof quiz.due === 'string' ? quiz.due : '');
+
+    return {
+      id: String(quiz.id || quiz._id || `${Date.now()}-${Math.random()}`),
+      courseCode: quiz.courseCode || 'COURSE',
+      course: quiz.course || { en: quiz.courseName || 'Course', ar: quiz.courseName || 'Course' },
+      title: quiz.title || { en: quiz.name || 'Quiz', ar: quiz.name || 'Quiz' },
+      description: quiz.description || { en: '', ar: '' },
+      due: quiz.due || { en: dueText, ar: dueText },
+      duration: Number(quiz.duration) || 10,
+      points: Number(quiz.points) || 100,
+      status: quiz.status || 'pending',
+      questions: Array.isArray(quiz.questions) ? quiz.questions.map((question) => ({
+        prompt: question.prompt || { en: '', ar: '' },
+        options: Array.isArray(question.options) ? question.options.map((option) => (
+          typeof option === 'string' ? { en: option, ar: option } : option
+        )) : [],
+        answer: Number(question.answer) || 0
+      })) : []
+    };
+  }
+
+  function resetQuizCollection() {
+    BASE_QUIZZES.splice(0, BASE_QUIZZES.length);
+  }
+
+  function mergeQuizzesPayload(payload) {
+    resetQuizCollection();
+
+    const safeQuizzes = Array.isArray(payload?.quizzes) ? payload.quizzes : [];
+    safeQuizzes.forEach((quiz) => {
+      BASE_QUIZZES.push(normalizeQuizRecord(quiz));
+    });
+  }
+
+  function collectQuestionDrafts(container) {
+    return Array.from(container.querySelectorAll('.cms-question-card')).map((card) => ({
+      prompt: card.querySelector('[data-question-prompt]')?.value || '',
+      options: Array.from(card.querySelectorAll('[data-question-option]')).map((input) => input.value || ''),
+      answer: Number(card.querySelector('[data-question-answer]')?.value || 0)
+    }));
+  }
+
+  function renderQuestionDrafts(container, drafts) {
+    container.innerHTML = drafts.map((draft, index) => `
+      <div class="cms-question-card" data-question-card>
+        <div class="cms-question-head">
+          <div class="cms-question-title">Question ${index + 1}</div>
+          <button class="secondary-btn" type="button" data-remove-question="${index}">Remove</button>
+        </div>
+        <div class="cms-field">
+          <label>Prompt</label>
+          <textarea data-question-prompt placeholder="Write the quiz question.">${window.UniLearnShell.escapeHtml(draft.prompt)}</textarea>
+        </div>
+        <div class="cms-question-grid">
+          ${draft.options.map((option, optionIndex) => `
+            <div class="cms-field">
+              <label>Option ${String.fromCharCode(65 + optionIndex)}</label>
+              <input data-question-option type="text" value="${window.UniLearnShell.escapeHtml(option)}">
+            </div>
+          `).join('')}
+        </div>
+        <div class="cms-field">
+          <label>Correct Answer</label>
+          <select data-question-answer>
+            ${draft.options.map((option, optionIndex) => `
+              <option value="${optionIndex}" ${Number(draft.answer) === optionIndex ? 'selected' : ''}>Option ${String.fromCharCode(65 + optionIndex)}</option>
+            `).join('')}
+          </select>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderQuizAdminPanel() {
+    if (!isAdminUser() || document.getElementById('quizCmsPanel')) return;
+
+    ensureCmsStyles();
+
+    const panel = document.createElement('section');
+    panel.id = 'quizCmsPanel';
+    panel.className = 'cms-admin-panel';
+    panel.innerHTML = `
+      <div class="cms-admin-head">
+        <div class="cms-admin-copy">
+          <span class="cms-admin-kicker">Admin CMS</span>
+          <h2 class="cms-admin-title">Create Quiz</h2>
+          <p class="cms-admin-note">Build quizzes and attach questions directly from the current quizzes page. Students do not see this panel.</p>
+        </div>
+        <div class="cms-admin-actions">
+          <button class="secondary-btn" id="quizCmsToggle" type="button">New Quiz</button>
+        </div>
+      </div>
+      <form class="cms-admin-form" id="quizCmsForm" hidden>
+        <div class="cms-admin-grid">
+          <div class="cms-field">
+            <label for="quizCmsCourseCode">Course Code</label>
+            <input id="quizCmsCourseCode" name="courseCode" type="text" placeholder="CS101" required>
+          </div>
+          <div class="cms-field">
+            <label for="quizCmsCourseName">Course Name</label>
+            <input id="quizCmsCourseName" name="courseName" type="text" required>
+          </div>
+          <div class="cms-field">
+            <label for="quizCmsDueDate">Due Date</label>
+            <input id="quizCmsDueDate" name="dueDate" type="date" required>
+          </div>
+        </div>
+        <div class="cms-admin-grid-two">
+          <div class="cms-field">
+            <label for="quizCmsDuration">Duration (minutes)</label>
+            <input id="quizCmsDuration" name="duration" type="number" min="1" value="15" required>
+          </div>
+          <div class="cms-field">
+            <label for="quizCmsPoints">Points</label>
+            <input id="quizCmsPoints" name="points" type="number" min="1" value="100" required>
+          </div>
+        </div>
+        <div class="cms-field">
+          <label for="quizCmsTitle">Quiz Title</label>
+          <input id="quizCmsTitle" name="title" type="text" required>
+        </div>
+        <div class="cms-field">
+          <label for="quizCmsDescription">Description</label>
+          <textarea id="quizCmsDescription" name="description" placeholder="What students should expect."></textarea>
+        </div>
+        <div class="cms-admin-copy">
+          <span class="cms-admin-kicker">Questions</span>
+        </div>
+        <div id="quizCmsQuestions"></div>
+        <div class="cms-admin-actions">
+          <button class="secondary-btn" id="quizCmsAddQuestion" type="button">Add Question</button>
+          <button class="primary-btn" id="quizCmsSubmit" type="submit">Publish Quiz</button>
+        </div>
+        <div class="cms-admin-status" id="quizCmsStatus"></div>
+      </form>
+    `;
+
+    const quizzesMain = document.querySelector('.quizzes-main');
+    quizzesMain.insertBefore(panel, quizzesMain.firstChild);
+
+    const form = document.getElementById('quizCmsForm');
+    const toggleButton = document.getElementById('quizCmsToggle');
+    const addQuestionButton = document.getElementById('quizCmsAddQuestion');
+    const submitButton = document.getElementById('quizCmsSubmit');
+    const status = document.getElementById('quizCmsStatus');
+    const questionContainer = document.getElementById('quizCmsQuestions');
+
+    renderQuestionDrafts(questionContainer, [createEmptyQuestion()]);
+
+    toggleButton.addEventListener('click', () => {
+      form.hidden = !form.hidden;
+      toggleButton.textContent = form.hidden ? 'New Quiz' : 'Hide Form';
+    });
+
+    addQuestionButton.addEventListener('click', () => {
+      const drafts = collectQuestionDrafts(questionContainer);
+      drafts.push(createEmptyQuestion());
+      renderQuestionDrafts(questionContainer, drafts);
+    });
+
+    questionContainer.addEventListener('click', (event) => {
+      const removeButton = event.target.closest('[data-remove-question]');
+      if (!removeButton) return;
+
+      const drafts = collectQuestionDrafts(questionContainer);
+      drafts.splice(Number(removeButton.dataset.removeQuestion), 1);
+      renderQuestionDrafts(questionContainer, drafts.length ? drafts : [createEmptyQuestion()]);
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        status.textContent = 'Missing auth token.';
+        return;
+      }
+
+      const questionDrafts = collectQuestionDrafts(questionContainer).map((draft) => ({
+        prompt: draft.prompt.trim(),
+        options: draft.options.map((option) => option.trim()).filter(Boolean),
+        answer: Number(draft.answer)
+      }));
+
+      const hasInvalidQuestion = questionDrafts.some((draft) => !draft.prompt || draft.options.length < 2 || draft.answer >= draft.options.length);
+      if (hasInvalidQuestion) {
+        status.textContent = 'Every question needs a prompt, at least two options, and a valid correct answer.';
+        return;
+      }
+
+      submitButton.disabled = true;
+      status.textContent = 'Publishing quiz...';
+
+      try {
+        const response = await fetch('/api/quizzes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            courseCode: document.getElementById('quizCmsCourseCode').value.trim(),
+            courseName: document.getElementById('quizCmsCourseName').value.trim(),
+            dueDate: document.getElementById('quizCmsDueDate').value,
+            duration: Number(document.getElementById('quizCmsDuration').value || 0),
+            points: Number(document.getElementById('quizCmsPoints').value || 0),
+            title: document.getElementById('quizCmsTitle').value.trim(),
+            description: document.getElementById('quizCmsDescription').value.trim(),
+            questions: questionDrafts
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.msg || 'Quiz publish failed');
+        }
+
+        form.reset();
+        renderQuestionDrafts(questionContainer, [createEmptyQuestion()]);
+        form.hidden = true;
+        toggleButton.textContent = 'New Quiz';
+        status.textContent = 'Quiz published successfully.';
+        state.activeTab = 'pending';
+        await loadQuizzesCms();
+      } catch (error) {
+        status.textContent = error.message || 'Quiz publish failed.';
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+  }
+
+  async function loadQuizzesCms() {
+    try {
+      const response = await fetch('/api/quizzes');
+
+      if (!response.ok) {
+        throw new Error('Failed to load quizzes');
+      }
+
+      const payload = await response.json();
+      mergeQuizzesPayload(payload);
+      renderAll();
+    } catch (error) {
+      console.error('Quiz CMS load failed:', error);
+    }
+  }
+
+  renderQuizAdminPanel();
   renderAll();
+  loadQuizzesCms();
 })();
