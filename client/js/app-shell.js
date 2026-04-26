@@ -440,7 +440,9 @@
       const navLinks = document.querySelector('.nav-links');
       if (!navLinks) return;
       const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'padding: 8px 12px 0;';
       wrapper.style.cssText = 'padding: 8px 12px 0; margin-bottom: auto;'; // margin-bottom لدفع القائمة للأسفل
+      wrapper.style.cssText = 'padding: 8px 12px 0;';
       wrapper.innerHTML = `
         <button id="sidebarLangToggle" type="button" class="lang-toggle" style="width:100%; border-radius:10px; justify-content:center; display:flex; gap: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: inherit; padding: 12px; cursor: pointer; font-weight: bold;">
           <span class="lang-option ${state.language === 'en' ? 'active' : ''}" data-lang-option="en" style="opacity: ${state.language === 'en' ? '1' : '0.5'}">EN</span>
@@ -448,7 +450,7 @@
           <span class="lang-option ${state.language === 'ar' ? 'active' : ''}" data-lang-option="ar" style="opacity: ${state.language === 'ar' ? '1' : '0.5'}">AR</span>
         </button>
       `;
-      navLinks.appendChild(wrapper);
+      navLinks.prepend(wrapper);
       
       const newBtn = document.getElementById('sidebarLangToggle');
       newBtn.addEventListener('click', () => {
@@ -461,7 +463,31 @@
     
     // تشغيل الدالة لإضافة الزرار في الشريط الجانبي
     injectSidebarLangToggle();
+    injectWhatsappSupportLink();
     // ------------------------------------------------
+
+    function injectWhatsappSupportLink() {
+      if (document.getElementById('sidebarWhatsappSupport')) return;
+      const navLinks = document.querySelector('.nav-links');
+      if (!navLinks) return;
+
+      const link = document.createElement('a');
+      link.id = 'sidebarWhatsappSupport';
+      link.className = 'nav-link';
+      link.href = 'https://wa.me/201119373447';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.marginTop = 'auto';
+      link.innerHTML = `
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11.5A8.5 8.5 0 0 1 7.44 18.98L3 20l1.08-4.28A8.5 8.5 0 1 1 20 11.5Z"></path>
+          <path d="M8.9 8.94c.18-.4.37-.41.54-.42.14-.01.3-.01.47-.01.15 0 .39.05.59.48.2.43.68 1.49.74 1.6.06.11.1.24.02.39-.08.15-.12.24-.24.37-.12.14-.25.3-.36.4-.12.12-.24.24-.1.47.14.24.62 1.02 1.33 1.65.92.82 1.69 1.07 1.93 1.19.24.12.38.1.52-.06.14-.15.57-.66.72-.89.15-.23.3-.19.5-.11.21.08 1.31.62 1.53.73.23.12.38.18.44.28.05.1.05.58-.13 1.14-.18.56-1.04 1.08-1.45 1.13-.37.05-.84.08-1.36-.09-.31-.1-.7-.23-1.21-.45-2.13-.92-3.52-3.18-3.62-3.33-.1-.15-.86-1.15-.86-2.2 0-1.05.55-1.56.74-1.77Z"></path>
+        </svg>
+        <span>WhatsApp Support</span>
+      `;
+
+      navLinks.appendChild(link);
+    }
 
     function closeSidebar() {
       if (!sidebar) return;
