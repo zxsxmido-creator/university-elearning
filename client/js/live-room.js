@@ -210,7 +210,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     translations:            TRANSLATIONS,
     defaultProfile:          { name: userName, role: userRole },
     defaultLanguage:         'ar',
-    logoutPath:              'login.html',
+    logoutPath:              '/login',
     sidebarSelector:         '#sidebar',
     closeSidebarOnLinkClick: false
   });
@@ -1002,7 +1002,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   el.endBtn.addEventListener('click', async () => {
     if (!window.confirm(shell.t('liveRoom.leaveConfirm'))) return;
     await cleanup();
-    window.location.href = 'dashboard.html';
+    window.location.href = '/dashboard';
   });
 
   document.addEventListener('click', (e) => {

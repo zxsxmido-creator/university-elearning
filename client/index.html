@@ -8,8 +8,8 @@
 <body>
   <script>
     const target = localStorage.getItem('userName')
-      ? 'pages/dashboard.html'
-      : 'pages/login.html';
+      ? '/dashboard'
+      : '/login';
     window.location.replace(target);
   </script>
 </body>

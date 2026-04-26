@@ -1,7 +1,7 @@
 (() => {
   // لو الطالب معاه توكن (مسجل دخول قبل كده)، نوديه للداشبورد علطول
   if (localStorage.getItem('token')) {
-    window.location.replace('dashboard.html');
+    window.location.replace('/dashboard');
     return;
   }
 
@@ -54,7 +54,7 @@
 
         alert('تم إنشاء الحساب بنجاح! مرحباً بك في المنصة.');
         // توجيه الطالب لصفحة المنصة الرئيسية
-        window.location.href = 'dashboard.html'; 
+        window.location.href = '/dashboard'; 
       } else {
         // لو الإيميل متسجل قبل كده أو في خطأ
         alert('خطأ في إنشاء الحساب: ' + (data.msg || 'يرجى المحاولة مرة أخرى'));

@@ -201,7 +201,7 @@
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Ahmad', role: 'student' },
     defaultLanguage: 'ar',
-    logoutPath: 'login.html'
+    logoutPath: '/login'
   });
 
   function pick(value) {
@@ -261,7 +261,7 @@ if (studyHoursElem) {
     filtered.forEach((lecture, index) => {
       const card = document.createElement('a');
       const isLive = lecture.status === 'live';
-      card.href = `live-room.html?channel=${encodeURIComponent(lecture.channel)}`;
+      card.href = `/live?channel=${encodeURIComponent(lecture.channel)}`;
       card.className = `lecture-card ${isLive ? 'live-now' : ''}`;
       card.style.animationDelay = `${0.05 + index * 0.07}s`;
       card.innerHTML = `
@@ -368,7 +368,7 @@ if (studyHoursElem) {
 
     filtered.forEach((course, index) => {
       const card = document.createElement('a');
-      card.href = 'curriculum.html';
+      card.href = '/curriculum';
       card.className = 'course-progress-card';
       card.style.animationDelay = `${0.3 + index * 0.05}s`;
       card.innerHTML = `

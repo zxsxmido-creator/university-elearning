@@ -212,7 +212,7 @@
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Student', role: 'student' },
     defaultLanguage: 'ar',
-    logoutPath: 'login.html'
+    logoutPath: '/login'
   });
 
   const subjectChips = document.getElementById('subjectChips');

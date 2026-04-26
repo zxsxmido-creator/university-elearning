@@ -1,7 +1,7 @@
 (() => {
   // لو الطالب معاه توكن (مسجل دخول قبل كده)، نوديه للداشبورد علطول
   if (localStorage.getItem('token')) {
-    window.location.replace('dashboard.html');
+    window.location.replace('/dashboard');
     return;
   }
 
@@ -55,7 +55,7 @@ if(data.user.avatar) {
         }
 
         // توجيه الطالب لصفحة المنصة الرئيسية
-        window.location.href = 'dashboard.html'; 
+        window.location.href = '/dashboard'; 
       } else {
         // لو الإيميل أو الباسوورد غلط
         alert('خطأ في تسجيل الدخول: ' + (data.msg || 'بيانات غير صحيحة'));

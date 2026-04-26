@@ -67,6 +67,53 @@ app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/lectures', require('./routes/lectures'));
 app.use('/api/live', require('./routes/live'));
+// ==========================================
+// توجيه الروابط النظيفة (Clean URLs Mapping)
+// ==========================================
+
+// الصفحة الرئيسية
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/index.html'));
+});
+
+// لوحة التحكم
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/dashboard.html'));
+});
+
+// المنهج الدراسي
+app.get('/curriculum', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/curriculum.html'));
+});
+
+// غرف البث المباشر
+app.get('/live', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/live-room.html'));
+});
+
+// المحاضرات المسجلة
+app.get('/vod', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/vod.html'));
+});
+
+// الاختبارات (Quizzes)
+app.get('/quizzes', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/quizzes.html'));
+});
+
+// التكليفات (Assignments)
+app.get('/assignments', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/assignments.html'));
+});
+
+// تسجيل الدخول والاشتراك
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/login.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/pages/register.html'));
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/index.html'));

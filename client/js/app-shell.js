@@ -1,8 +1,8 @@
 (() => {
     // حارس الأمن: لو مفيش توكن، اطرد المستخدم لصفحة اللوجين
     const token = localStorage.getItem('token');
-    if (!token && !window.location.pathname.includes('login.html') && !window.location.pathname.includes('register.html')) {
-        window.location.href = 'login.html';
+    if (!token && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+        window.location.href = '/login';
     }
     
     // ... وباقي الكود بتاعك مكمل زي ما هو لتحت
@@ -386,7 +386,7 @@
     translations = {},
     defaultProfile = {},
     defaultLanguage = 'ar', // تم تغيير اللغة الافتراضية هنا للعربية
-    logoutPath = 'login.html',
+    logoutPath = '/login',
     sidebarSelector = '.sidenav',
     closeSidebarOnLinkClick = true,
     onLanguageChange,

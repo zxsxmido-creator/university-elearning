@@ -228,7 +228,7 @@
     translations: TRANSLATIONS,
     defaultProfile: { name: 'Student', role: 'student' },
     defaultLanguage: 'ar',
-    logoutPath: 'login.html'
+    logoutPath: '/login'
   });
 
   const quizGrid = document.getElementById('quizGrid');
