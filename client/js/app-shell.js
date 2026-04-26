@@ -1,20 +1,22 @@
 (() => {
-    // حارس الأمن: لو مفيش توكن، اطرد المستخدم لصفحة اللوجين
-    const token = localStorage.getItem('token');
-    if (!token && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-        window.location.href = '/login';
-    }
-    
-    // ... وباقي الكود بتاعك مكمل زي ما هو لتحت
+  const token = localStorage.getItem('token');
+  if (!token && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+    window.location.href = '/login';
+  }
+
   const STORAGE_KEYS = {
     name: 'userName',
     role: 'userRole',
     avatar: 'userAvatar',
-    language: 'userLanguage'
+    language: 'userLanguage',
+    user: 'user'
   };
 
   const MODAL_ID = 'profileModal';
   const SHARED_STYLE_ID = 'unilearn-shell-inline-styles';
+  const SIDEBAR_LANGUAGE_WRAPPER_ID = 'sidebarLangToggleWrap';
+  const SIDEBAR_LANGUAGE_BUTTON_ID = 'sidebarLangToggle';
+  const SIDEBAR_WHATSAPP_ID = 'sidebarWhatsappSupport';
 
   function ensureSharedStyles() {
     if (document.getElementById(SHARED_STYLE_ID)) return;
@@ -274,8 +276,8 @@
   }
 
   function interpolate(template, params = {}) {
-    return String(template).replace(/\{\{(.*?)\}\}/g, (_, token) => {
-      const key = token.trim();
+    return String(template).replace(/\{\{(.*?)\}\}/g, (_, tokenValue) => {
+      const key = tokenValue.trim();
       return params[key] ?? '';
     });
   }
@@ -294,20 +296,52 @@
       .replace(/'/g, '&#39;');
   }
 
+  function readStoredUser() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeStoredUser(patch) {
+    const current = readStoredUser();
+    const next = { ...current, ...patch };
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(next));
+  }
+
   function getProfile(defaultProfile = {}) {
+    const storedUser = readStoredUser();
+
     return {
-      name: localStorage.getItem(STORAGE_KEYS.name) || defaultProfile.name || 'Student',
-      role: localStorage.getItem(STORAGE_KEYS.role) || defaultProfile.role || 'student',
-      avatar: localStorage.getItem(STORAGE_KEYS.avatar) || ''
+      name: localStorage.getItem(STORAGE_KEYS.name) || storedUser.name || defaultProfile.name || 'Student',
+      role: localStorage.getItem(STORAGE_KEYS.role) || storedUser.role || defaultProfile.role || 'student',
+      avatar: localStorage.getItem(STORAGE_KEYS.avatar) || storedUser.avatar || defaultProfile.avatar || ''
     };
   }
 
   function saveProfile(profile) {
-    if (profile.name) localStorage.setItem(STORAGE_KEYS.name, profile.name);
-    if (profile.role) localStorage.setItem(STORAGE_KEYS.role, profile.role);
+    if (Object.prototype.hasOwnProperty.call(profile, 'name')) {
+      if (profile.name) localStorage.setItem(STORAGE_KEYS.name, profile.name);
+      else localStorage.removeItem(STORAGE_KEYS.name);
+    }
 
-    if (profile.avatar) localStorage.setItem(STORAGE_KEYS.avatar, profile.avatar);
-    else localStorage.removeItem(STORAGE_KEYS.avatar);
+    if (Object.prototype.hasOwnProperty.call(profile, 'role')) {
+      if (profile.role) localStorage.setItem(STORAGE_KEYS.role, profile.role);
+      else localStorage.removeItem(STORAGE_KEYS.role);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(profile, 'avatar')) {
+      if (profile.avatar) localStorage.setItem(STORAGE_KEYS.avatar, profile.avatar);
+      else localStorage.removeItem(STORAGE_KEYS.avatar);
+    }
+
+    writeStoredUser({
+      name: profile.name ?? readStoredUser().name ?? '',
+      role: profile.role ?? readStoredUser().role ?? '',
+      avatar: profile.avatar ?? readStoredUser().avatar ?? ''
+    });
   }
 
   function setAvatarContent(element, profile) {
@@ -382,10 +416,38 @@
     document.body.appendChild(wrapper);
   }
 
+  function ensureSidebarFooter(sidebar) {
+    if (!sidebar) return null;
+
+    let footer = sidebar.querySelector('.nav-footer');
+    if (!footer) {
+      footer = document.createElement('div');
+      footer.className = 'nav-footer';
+      sidebar.appendChild(footer);
+    }
+
+    let userChip = footer.querySelector('#userChip');
+    if (!userChip) {
+      userChip = document.createElement('div');
+      userChip.id = 'userChip';
+      userChip.className = 'user-chip';
+      userChip.innerHTML = `
+        <div class="user-avatar" data-user-avatar>S</div>
+        <div>
+          <div class="user-info-name" data-user-name>Student</div>
+          <div class="user-info-role" data-user-role>Student</div>
+        </div>
+      `;
+      footer.appendChild(userChip);
+    }
+
+    return userChip;
+  }
+
   function init({
     translations = {},
     defaultProfile = {},
-    defaultLanguage = 'ar', // تم تغيير اللغة الافتراضية هنا للعربية
+    defaultLanguage = 'ar',
     logoutPath = '/login',
     sidebarSelector = '.sidenav',
     closeSidebarOnLinkClick = true,
@@ -396,7 +458,6 @@
     ensureProfileModal();
 
     const state = {
-      // تعديل Claude لضمان اللغة العربية كافتراضي
       language: localStorage.getItem(STORAGE_KEYS.language) || defaultLanguage || 'ar',
       stagedAvatar: null
     };
@@ -411,8 +472,7 @@
     const modalAvatarReset = document.getElementById('profileAvatarReset');
     const modalAvatarPreview = document.getElementById('profileAvatarPreview');
     const profileStatus = document.getElementById('profileStatus');
-    const userChip = document.getElementById('userChip');
-    const languageToggle = document.getElementById('languageToggle'); // الزرار القديم
+    const languageToggle = document.getElementById('languageToggle');
     const sidebar = document.querySelector(sidebarSelector);
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     let mobileBackdrop = document.getElementById('mobileNavBackdrop');
@@ -426,91 +486,6 @@
       document.body.appendChild(mobileBackdrop);
     }
 
-    // --- GLOBAL SIDEBAR LANG TOGGLE (تعديل Claude) ---
-    function syncSidebarLangToggle() {
-      const btn = document.getElementById('sidebarLangToggle');
-      if (!btn) return;
-      btn.querySelectorAll('[data-lang-option]').forEach(el => {
-        el.classList.toggle('active', el.dataset.langOption === state.language);
-      });
-    }
-
-    function injectSidebarLangToggle() {
-      if (document.getElementById('sidebarLangToggle')) return;
-      const navLinks = document.querySelector('.nav-links');
-      if (!navLinks) return;
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'padding: 8px 12px 0;';
-      wrapper.style.cssText = 'padding: 8px 12px 0; margin-bottom: auto;'; // margin-bottom لدفع القائمة للأسفل
-      wrapper.style.cssText = 'padding: 8px 12px 0;';
-      wrapper.innerHTML = `
-        <button id="sidebarLangToggle" type="button" class="lang-toggle" style="width:100%; border-radius:10px; justify-content:center; display:flex; gap: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: inherit; padding: 12px; cursor: pointer; font-weight: bold;">
-          <span class="lang-option ${state.language === 'en' ? 'active' : ''}" data-lang-option="en" style="opacity: ${state.language === 'en' ? '1' : '0.5'}">EN</span>
-          <span class="lang-separator" style="opacity: 0.3">/</span>
-          <span class="lang-option ${state.language === 'ar' ? 'active' : ''}" data-lang-option="ar" style="opacity: ${state.language === 'ar' ? '1' : '0.5'}">AR</span>
-        </button>
-      `;
-      navLinks.prepend(wrapper);
-      
-      const newBtn = document.getElementById('sidebarLangToggle');
-      newBtn.addEventListener('click', () => {
-        setLanguage(state.language === 'en' ? 'ar' : 'en');
-        // تحديث شفافية الأزرار بناءً على الاختيار
-        newBtn.querySelector('[data-lang-option="en"]').style.opacity = state.language === 'en' ? '1' : '0.5';
-        newBtn.querySelector('[data-lang-option="ar"]').style.opacity = state.language === 'ar' ? '1' : '0.5';
-      });
-    }
-    
-    // تشغيل الدالة لإضافة الزرار في الشريط الجانبي
-    injectSidebarLangToggle();
-    injectWhatsappSupportLink();
-    // ------------------------------------------------
-
-    function injectWhatsappSupportLink() {
-      if (document.getElementById('sidebarWhatsappSupport')) return;
-      const navLinks = document.querySelector('.nav-links');
-      if (!navLinks) return;
-
-      const link = document.createElement('a');
-      link.id = 'sidebarWhatsappSupport';
-      link.className = 'nav-link';
-      link.href = 'https://wa.me/201119373447';
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.style.marginTop = 'auto';
-      link.innerHTML = `
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20 11.5A8.5 8.5 0 0 1 7.44 18.98L3 20l1.08-4.28A8.5 8.5 0 1 1 20 11.5Z"></path>
-          <path d="M8.9 8.94c.18-.4.37-.41.54-.42.14-.01.3-.01.47-.01.15 0 .39.05.59.48.2.43.68 1.49.74 1.6.06.11.1.24.02.39-.08.15-.12.24-.24.37-.12.14-.25.3-.36.4-.12.12-.24.24-.1.47.14.24.62 1.02 1.33 1.65.92.82 1.69 1.07 1.93 1.19.24.12.38.1.52-.06.14-.15.57-.66.72-.89.15-.23.3-.19.5-.11.21.08 1.31.62 1.53.73.23.12.38.18.44.28.05.1.05.58-.13 1.14-.18.56-1.04 1.08-1.45 1.13-.37.05-.84.08-1.36-.09-.31-.1-.7-.23-1.21-.45-2.13-.92-3.52-3.18-3.62-3.33-.1-.15-.86-1.15-.86-2.2 0-1.05.55-1.56.74-1.77Z"></path>
-        </svg>
-        <span>WhatsApp Support</span>
-      `;
-
-      navLinks.appendChild(link);
-    }
-
-    function closeSidebar() {
-      if (!sidebar) return;
-      sidebar.classList.remove('mobile-open');
-      mobileBackdrop.classList.remove('open');
-      document.body.classList.remove('nav-open');
-      if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    function openSidebar() {
-      if (!sidebar) return;
-      sidebar.classList.add('mobile-open');
-      mobileBackdrop.classList.add('open');
-      document.body.classList.add('nav-open');
-      if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'true');
-    }
-
-    function toggleSidebar() {
-      if (!sidebar) return;
-      if (sidebar.classList.contains('mobile-open')) closeSidebar();
-      else openSidebar();
-    }
-
     function t(key, params = {}) {
       const langTable = translations[state.language] || translations.en || {};
       const fallbackTable = translations.en || {};
@@ -520,6 +495,110 @@
 
     function formatRole(role) {
       return t(`roles.${role}`) === `roles.${role}` ? capitalize(role) : t(`roles.${role}`);
+    }
+
+    function syncSidebarLangToggle() {
+      const button = document.getElementById(SIDEBAR_LANGUAGE_BUTTON_ID);
+      if (!button) return;
+
+      button.querySelectorAll('[data-lang-option]').forEach((element) => {
+        const isActive = element.dataset.langOption === state.language;
+        element.classList.toggle('active', isActive);
+        element.style.opacity = isActive ? '1' : '0.5';
+      });
+    }
+
+    function ensureSidebarLanguageToggle(navLinks) {
+      if (!navLinks) return null;
+
+      let wrapper = document.getElementById(SIDEBAR_LANGUAGE_WRAPPER_ID);
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.id = SIDEBAR_LANGUAGE_WRAPPER_ID;
+      }
+
+      wrapper.style.cssText = 'padding: 8px 12px 0;';
+      wrapper.innerHTML = `
+        <button id="${SIDEBAR_LANGUAGE_BUTTON_ID}" type="button" class="lang-toggle" style="width:100%; border-radius:10px; justify-content:center; display:flex; gap: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: inherit; padding: 12px; cursor: pointer; font-weight: bold;">
+          <span class="lang-option ${state.language === 'en' ? 'active' : ''}" data-lang-option="en" style="opacity: ${state.language === 'en' ? '1' : '0.5'}">EN</span>
+          <span class="lang-separator" style="opacity: 0.3">/</span>
+          <span class="lang-option ${state.language === 'ar' ? 'active' : ''}" data-lang-option="ar" style="opacity: ${state.language === 'ar' ? '1' : '0.5'}">AR</span>
+        </button>
+      `;
+
+      const button = wrapper.querySelector(`#${SIDEBAR_LANGUAGE_BUTTON_ID}`);
+      button.addEventListener('click', () => {
+        setLanguage(state.language === 'en' ? 'ar' : 'en');
+      });
+
+      return wrapper;
+    }
+
+    function ensureWhatsappSupportLink(navLinks) {
+      if (!navLinks) return null;
+
+      let link = document.getElementById(SIDEBAR_WHATSAPP_ID);
+      if (!link) {
+        link = document.createElement('a');
+        link.id = SIDEBAR_WHATSAPP_ID;
+      }
+
+      link.className = 'nav-link';
+      link.href = 'https://wa.me/201119373447';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.innerHTML = `
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11.5A8.5 8.5 0 0 1 7.44 18.98L3 20l1.08-4.28A8.5 8.5 0 1 1 20 11.5Z"></path>
+          <path d="M8.9 8.94c.18-.4.37-.41.54-.42.14-.01.3-.01.47-.01.15 0 .39.05.59.48.2.43.68 1.49.74 1.6.06.11.1.24.02.39-.08.15-.12.24-.24.37-.12.14-.25.3-.36.4-.12.12-.24.24-.1.47.14.24.62 1.02 1.33 1.65.92.82 1.69 1.07 1.93 1.19.24.12.38.1.52-.06.14-.15.57-.66.72-.89.15-.23.3-.19.5-.11.21.08 1.31.62 1.53.73.23.12.38.18.44.28.05.1.05.58-.13 1.14-.18.56-1.04 1.08-1.45 1.13-.37.05-.84.08-1.36-.09-.31-.1-.7-.23-1.21-.45-2.13-.92-3.52-3.18-3.62-3.33-.1-.15-.86-1.15-.86-2.2 0-1.05.55-1.56.74-1.77Z"></path>
+        </svg>
+        <span>WhatsApp Support</span>
+      `;
+
+      return link;
+    }
+
+    function normalizeSidebarStructure() {
+      if (!sidebar) return { userChip: null };
+
+      const navLinks = sidebar.querySelector('.nav-links');
+      const userChip = ensureSidebarFooter(sidebar);
+
+      if (!navLinks) {
+        return { userChip };
+      }
+
+      const languageWrapper = ensureSidebarLanguageToggle(navLinks);
+      const whatsappLink = ensureWhatsappSupportLink(navLinks);
+      const sectionLabel = navLinks.querySelector('.nav-section-label');
+      const orderedPaths = ['/dashboard', '/curriculum', '/vod', '/live', '/quizzes'];
+      const navLinkMap = new Map();
+
+      navLinks.querySelectorAll('a.nav-link[href]').forEach((link) => {
+        if (link.id === SIDEBAR_WHATSAPP_ID) return;
+
+        const href = link.getAttribute('href');
+        if (orderedPaths.includes(href)) {
+          navLinkMap.set(href, link);
+        }
+      });
+
+      const orderedNodes = [];
+      if (languageWrapper) orderedNodes.push(languageWrapper);
+      if (sectionLabel) orderedNodes.push(sectionLabel);
+
+      orderedPaths.forEach((path) => {
+        const link = navLinkMap.get(path);
+        if (link) orderedNodes.push(link);
+      });
+
+      if (whatsappLink) orderedNodes.push(whatsappLink);
+
+      orderedNodes.forEach((node) => {
+        navLinks.appendChild(node);
+      });
+
+      return { userChip };
     }
 
     function applyProfile(triggerCallback = false) {
@@ -587,6 +666,7 @@
       if (titleKey) document.title = t(titleKey);
 
       syncLanguageToggle();
+      syncSidebarLangToggle();
       applyProfile(false);
 
       if (typeof onLanguageChange === 'function') {
@@ -632,16 +712,17 @@
       setTimeout(closeProfileModal, 180);
     }
 
-    // --- تعديل Claude لتحديث الشريط الجانبي عند تغيير اللغة ---
     function setLanguage(nextLanguage) {
       state.language = nextLanguage;
       localStorage.setItem(STORAGE_KEYS.language, nextLanguage);
       applyStaticTranslations();
-      syncSidebarLangToggle(); // السطر المضاف هنا
       window.dispatchEvent(new CustomEvent('unilearn:language-changed', {
         detail: { language: nextLanguage }
       }));
     }
+
+    const sidebarRefs = normalizeSidebarStructure();
+    const userChip = sidebarRefs.userChip || document.getElementById('userChip');
 
     if (userChip) {
       userChip.setAttribute('tabindex', '0');
@@ -655,7 +736,6 @@
       });
     }
 
-    // زرار اللغة القديم لو لسه موجود في بعض الصفحات هيفضل شغال
     if (languageToggle) {
       languageToggle.addEventListener('click', () => {
         setLanguage(state.language === 'en' ? 'ar' : 'en');
@@ -673,6 +753,28 @@
           if (window.innerWidth <= 768) closeSidebar();
         });
       });
+    }
+
+    function closeSidebar() {
+      if (!sidebar) return;
+      sidebar.classList.remove('mobile-open');
+      mobileBackdrop.classList.remove('open');
+      document.body.classList.remove('nav-open');
+      if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    function openSidebar() {
+      if (!sidebar) return;
+      sidebar.classList.add('mobile-open');
+      mobileBackdrop.classList.add('open');
+      document.body.classList.add('nav-open');
+      if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function toggleSidebar() {
+      if (!sidebar) return;
+      if (sidebar.classList.contains('mobile-open')) closeSidebar();
+      else openSidebar();
     }
 
     mobileBackdrop.addEventListener('click', closeSidebar);
@@ -764,61 +866,47 @@
     escapeHtml,
     setAvatarContent
   };
-  // كود رفع الصورة الشخصية (يعمل مع العناصر الديناميكية)
-document.addEventListener('change', async (event) => {
-    // نتأكد إن الحدث حصل على زرار الصورة بتاعنا بالظبط
-    if (event.target && event.target.id === 'profileAvatarInput') {
-        const file = event.target.files[0];
-        if (!file) return;
 
-// تجهيز الصورة للإرسال
-const formData = new FormData();
-formData.append('profileImage', file);
+  document.addEventListener('change', async (event) => {
+    if (!event.target || event.target.id !== 'profileAvatarInput') return;
 
-// هنجيب بيانات المستخدم والتوكن من المتصفح عشان نثبت هويتنا للسيرفر
-const token = localStorage.getItem('token'); 
-const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const file = event.target.files[0];
+    if (!file) return;
 
-// بنضيف الـ ID بتاع المستخدم مع الصورة
-if (user._id) {
-    formData.append('userId', user._id);
-}
+    const formData = new FormData();
+    formData.append('profileImage', file);
 
-try {
-    // إرسال الصورة + بيانات المستخدم للسيرفر
-    const response = await fetch('/api/auth/update-avatar', {
+    const currentToken = localStorage.getItem('token');
+    const user = readStoredUser();
+    if (user._id) {
+      formData.append('userId', user._id);
+    }
+
+    try {
+      const response = await fetch('/api/auth/update-avatar', {
         method: 'POST',
         headers: {
-            // السطر ده بيبعت التوكن لو السيرفر بتاعك محمي بـ JWT
-            'Authorization': token ? `Bearer ${token}` : ''
+          Authorization: currentToken ? `Bearer ${currentToken}` : ''
         },
         body: formData
-    });
+      });
 
-            const data = await response.json();
+      const data = await response.json();
 
-            if (data.success) {
-                // تحديث الصورة في الشاشة فوراً
-                const avatars = document.querySelectorAll('.user-avatar, .profile-avatar-preview');
-                avatars.forEach(avatar => {
-                    avatar.style.backgroundImage = `url('${data.newImageUrl}')`;
-                    avatar.classList.add('is-image');
-                });
-                // تحديث الصورة في ذاكرة المتصفح
-        let currentUser = JSON.parse(localStorage.getItem('user'));
-        if (currentUser) {
-            currentUser.avatar = data.newImageUrl;
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            localStorage.setItem('userAvatar', data.newImageUrl);
-        }
-                alert('عاش! تم تحديث الصورة بنجاح 🚀');
-            } else {
-                alert('حصلت مشكلة: ' + data.message);
-            }
-        } catch (error) {
-            console.error('خطأ أثناء رفع الصورة:', error);
-            alert('حدث خطأ في الاتصال بالسيرفر.');
-        }
+      if (data.success) {
+        document.querySelectorAll('.user-avatar, .profile-avatar-preview').forEach((avatar) => {
+          avatar.style.backgroundImage = `url('${data.newImageUrl}')`;
+          avatar.classList.add('is-image');
+        });
+
+        saveProfile({ avatar: data.newImageUrl });
+        alert('Avatar updated successfully.');
+      } else {
+        alert('Upload problem: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Avatar upload failed:', error);
+      alert('A server connection error occurred.');
     }
-});
+  });
 })();
