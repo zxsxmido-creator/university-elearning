@@ -5,19 +5,25 @@
   }
 
   const STORAGE_KEYS = {
-    name: 'userName',
-    role: 'userRole',
-    avatar: 'userAvatar',
+    name:     'userName',
+    role:     'userRole',
+    avatar:   'userAvatar',
     language: 'userLanguage',
-    user: 'user'
+    user:     'user'
   };
 
-  const MODAL_ID = 'profileModal';
-  const SHARED_STYLE_ID = 'unilearn-shell-inline-styles';
-  const SIDEBAR_LANGUAGE_WRAPPER_ID = 'sidebarLangToggleWrap';
-  const SIDEBAR_LANGUAGE_BUTTON_ID = 'sidebarLangToggle';
-  const SIDEBAR_WHATSAPP_ID = 'sidebarWhatsappSupport';
+  const MODAL_ID                      = 'profileModal';
+  const SHARED_STYLE_ID               = 'unilearn-shell-inline-styles';
+  const SIDEBAR_LANGUAGE_WRAPPER_ID   = 'sidebarLangToggleWrap';
+  const SIDEBAR_LANGUAGE_BUTTON_ID    = 'sidebarLangToggle';
+  const SIDEBAR_WHATSAPP_ID           = 'sidebarWhatsappSupport';
 
+  // ── Detect Live Room once at module level ──────────────────────
+  const IS_LIVE_ROOM = window.location.pathname.includes('/live');
+
+  // ─────────────────────────────────────────────────────────────
+  // SHARED STYLES (injected once, only on non-live-room pages)
+  // ─────────────────────────────────────────────────────────────
   function ensureSharedStyles() {
     if (document.getElementById(SHARED_STYLE_ID)) return;
     if (document.querySelector('link[href*="app-shell.css"]')) return;
@@ -33,10 +39,7 @@
         background: rgba(15, 15, 15, 0.5);
         backdrop-filter: blur(6px);
       }
-
-      .mobile-nav-backdrop.open {
-        display: block;
-      }
+      .mobile-nav-backdrop.open { display: block; }
 
       .profile-modal-overlay {
         position: fixed;
@@ -49,10 +52,7 @@
         background: rgba(15, 15, 15, 0.55);
         backdrop-filter: blur(10px);
       }
-
-      .profile-modal-overlay.open {
-        display: flex;
-      }
+      .profile-modal-overlay.open { display: flex; }
 
       .profile-modal {
         width: min(100%, 520px);
@@ -72,7 +72,6 @@
         gap: 16px;
         padding: 22px 24px;
       }
-
       .profile-modal-header {
         align-items: flex-start;
         border-bottom: 1px solid rgba(24, 19, 14, 0.08);
@@ -83,7 +82,6 @@
         font-weight: 700;
         line-height: 1.1;
       }
-
       .profile-modal-subtitle {
         margin-top: 6px;
         color: rgba(24, 19, 14, 0.6);
@@ -104,9 +102,7 @@
         cursor: pointer;
       }
 
-      .profile-modal-body {
-        padding: 24px;
-      }
+      .profile-modal-body { padding: 24px; }
 
       .profile-identity {
         display: grid;
@@ -137,10 +133,7 @@
         background-repeat: no-repeat;
         background-size: cover;
       }
-
-      .profile-avatar-preview.is-image {
-        color: transparent;
-      }
+      .profile-avatar-preview.is-image { color: transparent; }
 
       .profile-avatar-hint {
         color: rgba(24, 19, 14, 0.55);
@@ -150,10 +143,7 @@
       }
 
       .profile-form-grid,
-      .profile-field {
-        display: grid;
-        gap: 12px;
-      }
+      .profile-field { display: grid; gap: 12px; }
 
       .profile-label {
         color: rgba(24, 19, 14, 0.6);
@@ -171,7 +161,6 @@
         color: inherit;
         outline: none;
       }
-
       .profile-input:focus {
         border-color: #c4441a;
         box-shadow: 0 0 0 3px rgba(196, 68, 26, 0.12);
@@ -184,19 +173,11 @@
         gap: 10px;
       }
 
-      .profile-status {
-        min-height: 16px;
-        color: #1a6b5c;
-        font-size: 11px;
-      }
+      .profile-status { min-height: 16px; color: #1a6b5c; font-size: 11px; }
 
-      .profile-modal-footer {
-        border-top: 1px solid rgba(24, 19, 14, 0.08);
-      }
+      .profile-modal-footer { border-top: 1px solid rgba(24, 19, 14, 0.08); }
 
-      .primary-btn,
-      .secondary-btn,
-      .danger-btn {
+      .primary-btn, .secondary-btn, .danger-btn {
         min-height: 42px;
         padding: 10px 16px;
         border: 1px solid rgba(24, 19, 14, 0.12);
@@ -204,38 +185,21 @@
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
-        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+        transition: transform 0.18s ease, box-shadow 0.18s ease,
+                    border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
       }
-
-      .primary-btn:hover,
-      .secondary-btn:hover,
-      .danger-btn:hover {
+      .primary-btn:hover, .secondary-btn:hover, .danger-btn:hover {
         transform: translateY(-1px);
         box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
       }
-
-      .primary-btn {
-        background: #c4441a;
-        border-color: #c4441a;
-        color: #fff;
-      }
-
-      .secondary-btn {
-        background: rgba(255, 255, 255, 0.9);
-        color: inherit;
-      }
-
-      .danger-btn {
-        background: transparent;
-        color: #c4441a;
-      }
+      .primary-btn { background: #c4441a; border-color: #c4441a; color: #fff; }
+      .secondary-btn { background: rgba(255, 255, 255, 0.9); color: inherit; }
+      .danger-btn { background: transparent; color: #c4441a; }
 
       .visually-hidden {
         position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px;
         overflow: hidden;
         clip: rect(0, 0, 0, 0);
         white-space: nowrap;
@@ -243,31 +207,20 @@
       }
 
       @media (max-width: 768px) {
-        .profile-modal-overlay {
-          padding: 16px;
-        }
-
+        .profile-modal-overlay { padding: 16px; }
         .profile-modal-header,
         .profile-modal-body,
-        .profile-modal-footer {
-          padding-left: 18px;
-          padding-right: 18px;
-        }
-
-        .profile-identity {
-          grid-template-columns: 1fr;
-        }
-
-        .profile-modal-footer {
-          flex-direction: column;
-          align-items: stretch;
-        }
+        .profile-modal-footer { padding-left: 18px; padding-right: 18px; }
+        .profile-identity { grid-template-columns: 1fr; }
+        .profile-modal-footer { flex-direction: column; align-items: stretch; }
       }
     `;
-
     document.head.appendChild(style);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // UTILITIES
+  // ─────────────────────────────────────────────────────────────
   function resolveKey(source, key) {
     return key.split('.').reduce((value, segment) => {
       if (!value || typeof value !== 'object') return undefined;
@@ -296,6 +249,9 @@
       .replace(/'/g, '&#39;');
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // LOCAL STORAGE HELPERS
+  // ─────────────────────────────────────────────────────────────
   function readStoredUser() {
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || '{}');
@@ -307,46 +263,44 @@
 
   function writeStoredUser(patch) {
     const current = readStoredUser();
-    const next = { ...current, ...patch };
+    const next    = { ...current, ...patch };
     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(next));
   }
 
   function getProfile(defaultProfile = {}) {
     const storedUser = readStoredUser();
-
     return {
-      name: localStorage.getItem(STORAGE_KEYS.name) || storedUser.name || defaultProfile.name || 'Student',
-      role: localStorage.getItem(STORAGE_KEYS.role) || storedUser.role || defaultProfile.role || 'student',
+      name:   localStorage.getItem(STORAGE_KEYS.name)   || storedUser.name   || defaultProfile.name   || 'Student',
+      role:   localStorage.getItem(STORAGE_KEYS.role)   || storedUser.role   || defaultProfile.role   || 'student',
       avatar: localStorage.getItem(STORAGE_KEYS.avatar) || storedUser.avatar || defaultProfile.avatar || ''
     };
   }
 
   function saveProfile(profile) {
     if (Object.prototype.hasOwnProperty.call(profile, 'name')) {
-      if (profile.name) localStorage.setItem(STORAGE_KEYS.name, profile.name);
-      else localStorage.removeItem(STORAGE_KEYS.name);
+      profile.name
+        ? localStorage.setItem(STORAGE_KEYS.name, profile.name)
+        : localStorage.removeItem(STORAGE_KEYS.name);
     }
-
     if (Object.prototype.hasOwnProperty.call(profile, 'role')) {
-      if (profile.role) localStorage.setItem(STORAGE_KEYS.role, profile.role);
-      else localStorage.removeItem(STORAGE_KEYS.role);
+      profile.role
+        ? localStorage.setItem(STORAGE_KEYS.role, profile.role)
+        : localStorage.removeItem(STORAGE_KEYS.role);
     }
-
     if (Object.prototype.hasOwnProperty.call(profile, 'avatar')) {
-      if (profile.avatar) localStorage.setItem(STORAGE_KEYS.avatar, profile.avatar);
-      else localStorage.removeItem(STORAGE_KEYS.avatar);
+      profile.avatar
+        ? localStorage.setItem(STORAGE_KEYS.avatar, profile.avatar)
+        : localStorage.removeItem(STORAGE_KEYS.avatar);
     }
-
     writeStoredUser({
-      name: profile.name ?? readStoredUser().name ?? '',
-      role: profile.role ?? readStoredUser().role ?? '',
+      name:   profile.name   ?? readStoredUser().name   ?? '',
+      role:   profile.role   ?? readStoredUser().role   ?? '',
       avatar: profile.avatar ?? readStoredUser().avatar ?? ''
     });
   }
 
   function setAvatarContent(element, profile) {
     if (!element) return;
-
     const initial = (profile.name || '?').trim().charAt(0).toUpperCase() || '?';
     if (profile.avatar) {
       element.textContent = initial;
@@ -359,11 +313,14 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // PROFILE MODAL
+  // ─────────────────────────────────────────────────────────────
   function ensureProfileModal() {
     if (document.getElementById(MODAL_ID)) return;
 
     const wrapper = document.createElement('div');
-    wrapper.id = MODAL_ID;
+    wrapper.id        = MODAL_ID;
     wrapper.className = 'profile-modal-overlay';
     wrapper.setAttribute('aria-hidden', 'true');
     wrapper.innerHTML = `
@@ -389,7 +346,9 @@
             <div class="profile-form-grid">
               <label class="profile-field">
                 <span class="profile-label" data-i18n="profile.displayNameLabel">Display name</span>
-                <input class="profile-input" id="profileDisplayName" type="text" maxlength="40" placeholder="Enter your display name" data-i18n-placeholder="profile.displayNamePlaceholder">
+                <input class="profile-input" id="profileDisplayName" type="text" maxlength="40"
+                  placeholder="Enter your display name"
+                  data-i18n-placeholder="profile.displayNamePlaceholder">
               </label>
               <div class="profile-field">
                 <span class="profile-label" data-i18n="profile.avatarLabel">Profile picture</span>
@@ -407,16 +366,21 @@
           <button class="danger-btn" type="button" id="profileLogoutBtn" data-i18n="profile.logout">Logout</button>
           <div class="profile-modal-footer-actions">
             <button class="secondary-btn" type="button" id="profileCancelBtn" data-i18n="profile.cancel">Cancel</button>
-            <button class="primary-btn" type="button" id="profileSaveBtn" data-i18n="profile.save">Save changes</button>
+            <button class="primary-btn"   type="button" id="profileSaveBtn"   data-i18n="profile.save">Save changes</button>
           </div>
         </div>
       </div>
     `;
-
     document.body.appendChild(wrapper);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // SIDEBAR FOOTER HELPER
+  // ─────────────────────────────────────────────────────────────
   function ensureSidebarFooter(sidebar) {
+    // ── LIVE ROOM GUARD: do not inject footer into live room DOM ──
+    if (IS_LIVE_ROOM) return null;
+
     if (!sidebar) return null;
 
     let footer = sidebar.querySelector('.nav-footer');
@@ -429,7 +393,7 @@
     let userChip = footer.querySelector('#userChip');
     if (!userChip) {
       userChip = document.createElement('div');
-      userChip.id = 'userChip';
+      userChip.id        = 'userChip';
       userChip.className = 'user-chip';
       userChip.innerHTML = `
         <div class="user-avatar" data-user-avatar>S</div>
@@ -444,50 +408,139 @@
     return userChip;
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // SIDEBAR STRUCTURE NORMALISER
+  // ─────────────────────────────────────────────────────────────
+  function normalizeSidebarStructure(sidebar, state, t, setLanguage) {
+    // ── LIVE ROOM GUARD: skip all nav injection on the live room page ──
+    if (IS_LIVE_ROOM) {
+      return { userChip: null };
+    }
+
+    if (!sidebar) return { userChip: null };
+
+    const navLinks  = sidebar.querySelector('.nav-links');
+    const userChip  = ensureSidebarFooter(sidebar);
+
+    if (!navLinks) return { userChip };
+
+    // ── Language toggle ────────────────────────────────────────
+    let langWrapper = document.getElementById(SIDEBAR_LANGUAGE_WRAPPER_ID);
+    if (!langWrapper) {
+      langWrapper    = document.createElement('div');
+      langWrapper.id = SIDEBAR_LANGUAGE_WRAPPER_ID;
+    }
+    langWrapper.style.cssText = 'padding: 8px 12px 0;';
+    langWrapper.innerHTML = `
+      <button id="${SIDEBAR_LANGUAGE_BUTTON_ID}" type="button" class="lang-toggle"
+        style="width:100%; border-radius:10px; justify-content:center; display:flex; gap:8px;
+               border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2);
+               color:inherit; padding:12px; cursor:pointer; font-weight:bold;">
+        <span class="lang-option ${state.language === 'en' ? 'active' : ''}" data-lang-option="en"
+          style="opacity:${state.language === 'en' ? '1' : '0.5'}">EN</span>
+        <span class="lang-separator" style="opacity:0.3">/</span>
+        <span class="lang-option ${state.language === 'ar' ? 'active' : ''}" data-lang-option="ar"
+          style="opacity:${state.language === 'ar' ? '1' : '0.5'}">AR</span>
+      </button>
+    `;
+    const langBtn = langWrapper.querySelector(`#${SIDEBAR_LANGUAGE_BUTTON_ID}`);
+    langBtn.addEventListener('click', () => {
+      setLanguage(state.language === 'en' ? 'ar' : 'en');
+    });
+
+    // ── WhatsApp link ──────────────────────────────────────────
+    let whatsappLink = document.getElementById(SIDEBAR_WHATSAPP_ID);
+    if (!whatsappLink) {
+      whatsappLink    = document.createElement('a');
+      whatsappLink.id = SIDEBAR_WHATSAPP_ID;
+    }
+    whatsappLink.className = 'nav-link';
+    whatsappLink.href      = 'https://wa.me/201119373447';
+    whatsappLink.target    = '_blank';
+    whatsappLink.rel       = 'noopener noreferrer';
+    whatsappLink.innerHTML = `
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 11.5A8.5 8.5 0 0 1 7.44 18.98L3 20l1.08-4.28A8.5 8.5 0 1 1 20 11.5Z"></path>
+        <path d="M8.9 8.94c.18-.4.37-.41.54-.42.14-.01.3-.01.47-.01.15 0 .39.05.59.48.2.43.68 1.49.74 1.6.06.11.1.24.02.39-.08.15-.12.24-.24.37-.12.14-.25.3-.36.4-.12.12-.24.24-.1.47.14.24.62 1.02 1.33 1.65.92.82 1.69 1.07 1.93 1.19.24.12.38.1.52-.06.14-.15.57-.66.72-.89.15-.23.3-.19.5-.11.21.08 1.31.62 1.53.73.23.12.38.18.44.28.05.1.05.58-.13 1.14-.18.56-1.04 1.08-1.45 1.13-.37.05-.84.08-1.36-.09-.31-.1-.7-.23-1.21-.45-2.13-.92-3.52-3.18-3.62-3.33-.1-.15-.86-1.15-.86-2.2 0-1.05.55-1.56.74-1.77Z"></path>
+      </svg>
+      <span>WhatsApp Support</span>
+    `;
+
+    // ── Ordered nav link paths ─────────────────────────────────
+    const sectionLabel   = navLinks.querySelector('.nav-section-label');
+    const orderedPaths   = ['/dashboard', '/curriculum', '/vod', '/live', '/quizzes'];
+    const navLinkMap     = new Map();
+
+    navLinks.querySelectorAll('a.nav-link[href]').forEach((link) => {
+      if (link.id === SIDEBAR_WHATSAPP_ID) return;
+      const href = link.getAttribute('href');
+      if (orderedPaths.includes(href)) navLinkMap.set(href, link);
+    });
+
+    const orderedNodes = [];
+    if (langWrapper)  orderedNodes.push(langWrapper);
+    if (sectionLabel) orderedNodes.push(sectionLabel);
+
+    orderedPaths.forEach((path) => {
+      const link = navLinkMap.get(path);
+      if (link) orderedNodes.push(link);
+    });
+
+    if (whatsappLink) orderedNodes.push(whatsappLink);
+
+    orderedNodes.forEach((node) => navLinks.appendChild(node));
+
+    return { userChip };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MAIN INIT
+  // ─────────────────────────────────────────────────────────────
   function init({
-    translations = {},
-    defaultProfile = {},
-    defaultLanguage = 'ar',
-    logoutPath = '/login',
-    sidebarSelector = '.sidenav',
+    translations           = {},
+    defaultProfile         = {},
+    defaultLanguage        = 'ar',
+    logoutPath             = '/login',
+    sidebarSelector        = '.sidenav',
     closeSidebarOnLinkClick = true,
     onLanguageChange,
     onProfileChange
   } = {}) {
+
     ensureSharedStyles();
     ensureProfileModal();
 
     const state = {
-      language: localStorage.getItem(STORAGE_KEYS.language) || defaultLanguage || 'ar',
+      language:     localStorage.getItem(STORAGE_KEYS.language) || defaultLanguage || 'ar',
       stagedAvatar: null
     };
 
-    const modal = document.getElementById(MODAL_ID);
-    const modalCloseBtn = document.getElementById('profileCloseBtn');
-    const modalCancelBtn = document.getElementById('profileCancelBtn');
-    const modalSaveBtn = document.getElementById('profileSaveBtn');
-    const modalLogoutBtn = document.getElementById('profileLogoutBtn');
-    const modalNameInput = document.getElementById('profileDisplayName');
-    const modalAvatarInput = document.getElementById('profileAvatarInput');
-    const modalAvatarReset = document.getElementById('profileAvatarReset');
+    const modal             = document.getElementById(MODAL_ID);
+    const modalCloseBtn     = document.getElementById('profileCloseBtn');
+    const modalCancelBtn    = document.getElementById('profileCancelBtn');
+    const modalSaveBtn      = document.getElementById('profileSaveBtn');
+    const modalLogoutBtn    = document.getElementById('profileLogoutBtn');
+    const modalNameInput    = document.getElementById('profileDisplayName');
+    const modalAvatarInput  = document.getElementById('profileAvatarInput');
+    const modalAvatarReset  = document.getElementById('profileAvatarReset');
     const modalAvatarPreview = document.getElementById('profileAvatarPreview');
-    const profileStatus = document.getElementById('profileStatus');
-    const languageToggle = document.getElementById('languageToggle');
-    const sidebar = document.querySelector(sidebarSelector);
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    let mobileBackdrop = document.getElementById('mobileNavBackdrop');
+    const profileStatus     = document.getElementById('profileStatus');
+    const sidebar           = document.querySelector(sidebarSelector);
+    const mobileMenuBtn     = document.getElementById('mobileMenuBtn');
 
+    let mobileBackdrop = document.getElementById('mobileNavBackdrop');
     if (!mobileBackdrop) {
-      mobileBackdrop = document.createElement('button');
-      mobileBackdrop.id = 'mobileNavBackdrop';
+      mobileBackdrop           = document.createElement('button');
+      mobileBackdrop.id        = 'mobileNavBackdrop';
       mobileBackdrop.className = 'mobile-nav-backdrop';
-      mobileBackdrop.type = 'button';
+      mobileBackdrop.type      = 'button';
       mobileBackdrop.setAttribute('aria-label', 'Close sidebar');
       document.body.appendChild(mobileBackdrop);
     }
 
+    // ── Translation helpers ──────────────────────────────────────
     function t(key, params = {}) {
-      const langTable = translations[state.language] || translations.en || {};
+      const langTable     = translations[state.language] || translations.en || {};
       const fallbackTable = translations.en || {};
       const raw = resolveKey(langTable, key) ?? resolveKey(fallbackTable, key) ?? key;
       return interpolate(raw, params);
@@ -497,169 +550,71 @@
       return t(`roles.${role}`) === `roles.${role}` ? capitalize(role) : t(`roles.${role}`);
     }
 
+    // ── Language toggle sync ─────────────────────────────────────
     function syncSidebarLangToggle() {
+      if (IS_LIVE_ROOM) return;
       const button = document.getElementById(SIDEBAR_LANGUAGE_BUTTON_ID);
       if (!button) return;
-
-      button.querySelectorAll('[data-lang-option]').forEach((element) => {
-        const isActive = element.dataset.langOption === state.language;
-        element.classList.toggle('active', isActive);
-        element.style.opacity = isActive ? '1' : '0.5';
+      button.querySelectorAll('[data-lang-option]').forEach((el) => {
+        const isActive = el.dataset.langOption === state.language;
+        el.classList.toggle('active', isActive);
+        el.style.opacity = isActive ? '1' : '0.5';
       });
     }
 
-    function ensureSidebarLanguageToggle(navLinks) {
-      if (!navLinks) return null;
-
-      let wrapper = document.getElementById(SIDEBAR_LANGUAGE_WRAPPER_ID);
-      if (!wrapper) {
-        wrapper = document.createElement('div');
-        wrapper.id = SIDEBAR_LANGUAGE_WRAPPER_ID;
-      }
-
-      wrapper.style.cssText = 'padding: 8px 12px 0;';
-      wrapper.innerHTML = `
-        <button id="${SIDEBAR_LANGUAGE_BUTTON_ID}" type="button" class="lang-toggle" style="width:100%; border-radius:10px; justify-content:center; display:flex; gap: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: inherit; padding: 12px; cursor: pointer; font-weight: bold;">
-          <span class="lang-option ${state.language === 'en' ? 'active' : ''}" data-lang-option="en" style="opacity: ${state.language === 'en' ? '1' : '0.5'}">EN</span>
-          <span class="lang-separator" style="opacity: 0.3">/</span>
-          <span class="lang-option ${state.language === 'ar' ? 'active' : ''}" data-lang-option="ar" style="opacity: ${state.language === 'ar' ? '1' : '0.5'}">AR</span>
-        </button>
-      `;
-
-      const button = wrapper.querySelector(`#${SIDEBAR_LANGUAGE_BUTTON_ID}`);
-      button.addEventListener('click', () => {
-        setLanguage(state.language === 'en' ? 'ar' : 'en');
+    function syncLanguageToggle() {
+      const lt = document.getElementById('languageToggle');
+      if (!lt) return;
+      lt.setAttribute('aria-label', t('common.languageToggleLabel'));
+      lt.setAttribute('aria-pressed', String(state.language === 'ar'));
+      lt.querySelectorAll('[data-lang-option]').forEach((el) => {
+        el.classList.toggle('active', el.dataset.langOption === state.language);
       });
-
-      return wrapper;
     }
 
-    function ensureWhatsappSupportLink(navLinks) {
-      if (!navLinks) return null;
-
-      let link = document.getElementById(SIDEBAR_WHATSAPP_ID);
-      if (!link) {
-        link = document.createElement('a');
-        link.id = SIDEBAR_WHATSAPP_ID;
-      }
-
-      link.className = 'nav-link';
-      link.href = 'https://wa.me/201119373447';
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.innerHTML = `
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20 11.5A8.5 8.5 0 0 1 7.44 18.98L3 20l1.08-4.28A8.5 8.5 0 1 1 20 11.5Z"></path>
-          <path d="M8.9 8.94c.18-.4.37-.41.54-.42.14-.01.3-.01.47-.01.15 0 .39.05.59.48.2.43.68 1.49.74 1.6.06.11.1.24.02.39-.08.15-.12.24-.24.37-.12.14-.25.3-.36.4-.12.12-.24.24-.1.47.14.24.62 1.02 1.33 1.65.92.82 1.69 1.07 1.93 1.19.24.12.38.1.52-.06.14-.15.57-.66.72-.89.15-.23.3-.19.5-.11.21.08 1.31.62 1.53.73.23.12.38.18.44.28.05.1.05.58-.13 1.14-.18.56-1.04 1.08-1.45 1.13-.37.05-.84.08-1.36-.09-.31-.1-.7-.23-1.21-.45-2.13-.92-3.52-3.18-3.62-3.33-.1-.15-.86-1.15-.86-2.2 0-1.05.55-1.56.74-1.77Z"></path>
-        </svg>
-        <span>WhatsApp Support</span>
-      `;
-
-      return link;
-    }
-
-    function normalizeSidebarStructure() {
-      if (!sidebar) return { userChip: null };
-
-      const navLinks = sidebar.querySelector('.nav-links');
-      const userChip = ensureSidebarFooter(sidebar);
-
-      if (!navLinks) {
-        return { userChip };
-      }
-
-      const languageWrapper = ensureSidebarLanguageToggle(navLinks);
-      const whatsappLink = ensureWhatsappSupportLink(navLinks);
-      const sectionLabel = navLinks.querySelector('.nav-section-label');
-      const orderedPaths = ['/dashboard', '/curriculum', '/vod', '/live', '/quizzes'];
-      const navLinkMap = new Map();
-
-      navLinks.querySelectorAll('a.nav-link[href]').forEach((link) => {
-        if (link.id === SIDEBAR_WHATSAPP_ID) return;
-
-        const href = link.getAttribute('href');
-        if (orderedPaths.includes(href)) {
-          navLinkMap.set(href, link);
-        }
-      });
-
-      const orderedNodes = [];
-      if (languageWrapper) orderedNodes.push(languageWrapper);
-      if (sectionLabel) orderedNodes.push(sectionLabel);
-
-      orderedPaths.forEach((path) => {
-        const link = navLinkMap.get(path);
-        if (link) orderedNodes.push(link);
-      });
-
-      if (whatsappLink) orderedNodes.push(whatsappLink);
-
-      orderedNodes.forEach((node) => {
-        navLinks.appendChild(node);
-      });
-
-      return { userChip };
-    }
-
+    // ── Profile sync ─────────────────────────────────────────────
     function applyProfile(triggerCallback = false) {
       const profile = getProfile(defaultProfile);
 
-      document.querySelectorAll('[data-user-name]').forEach((element) => {
-        element.textContent = profile.name;
+      document.querySelectorAll('[data-user-name]').forEach((el) => {
+        el.textContent = profile.name;
       });
-
-      document.querySelectorAll('[data-user-role]').forEach((element) => {
-        element.textContent = formatRole(profile.role);
+      document.querySelectorAll('[data-user-role]').forEach((el) => {
+        el.textContent = formatRole(profile.role);
       });
-
-      document.querySelectorAll('[data-user-avatar]').forEach((element) => {
-        setAvatarContent(element, profile);
+      document.querySelectorAll('[data-user-avatar]').forEach((el) => {
+        setAvatarContent(el, profile);
       });
-
       setAvatarContent(modalAvatarPreview, profile);
 
       if (triggerCallback && typeof onProfileChange === 'function') {
         onProfileChange({ profile, language: state.language, t });
       }
-
       return profile;
     }
 
-    function syncLanguageToggle() {
-      if (!languageToggle) return;
-
-      languageToggle.setAttribute('aria-label', t('common.languageToggleLabel'));
-      languageToggle.setAttribute('aria-pressed', String(state.language === 'ar'));
-      languageToggle.querySelectorAll('[data-lang-option]').forEach((element) => {
-        element.classList.toggle('active', element.dataset.langOption === state.language);
-      });
-    }
-
+    // ── Static translations ──────────────────────────────────────
     function applyStaticTranslations() {
       document.documentElement.lang = state.language;
-      document.documentElement.dir = state.language === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.dir  = state.language === 'ar' ? 'rtl' : 'ltr';
       document.body.dataset.language = state.language;
       document.body.classList.toggle('is-rtl', state.language === 'ar');
       document.body.classList.toggle('is-ltr', state.language !== 'ar');
 
-      document.querySelectorAll('[data-i18n]').forEach((element) => {
-        element.textContent = t(element.dataset.i18n);
+      document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
       });
-
-      document.querySelectorAll('[data-i18n-html]').forEach((element) => {
-        element.innerHTML = t(element.dataset.i18nHtml);
+      document.querySelectorAll('[data-i18n-html]').forEach((el) => {
+        el.innerHTML = t(el.dataset.i18nHtml);
       });
-
-      document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
-        element.setAttribute('placeholder', t(element.dataset.i18nPlaceholder));
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
       });
-
-      document.querySelectorAll('[data-i18n-aria]').forEach((element) => {
-        element.setAttribute('aria-label', t(element.dataset.i18nAria));
+      document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+        el.setAttribute('aria-label', t(el.dataset.i18nAria));
       });
-
-      document.querySelectorAll('[data-i18n-title]').forEach((element) => {
-        element.setAttribute('title', t(element.dataset.i18nTitle));
+      document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+        el.setAttribute('title', t(el.dataset.i18nTitle));
       });
 
       const titleKey = document.body.dataset.titleKey;
@@ -674,6 +629,18 @@
       }
     }
 
+    // ── Set language ─────────────────────────────────────────────
+    function setLanguage(nextLanguage) {
+      state.language = nextLanguage;
+      localStorage.setItem(STORAGE_KEYS.language, nextLanguage);
+      applyStaticTranslations();
+      syncSidebarLangToggle();
+      window.dispatchEvent(new CustomEvent('unilearn:language-changed', {
+        detail: { language: nextLanguage }
+      }));
+    }
+
+    // ── Profile modal ────────────────────────────────────────────
     function openProfileModal() {
       state.stagedAvatar = getProfile(defaultProfile).avatar || null;
       modalNameInput.value = getProfile(defaultProfile).name;
@@ -691,70 +658,28 @@
       modal.classList.remove('open');
       modal.setAttribute('aria-hidden', 'true');
       profileStatus.textContent = '';
-      modalAvatarInput.value = '';
-      state.stagedAvatar = null;
+      modalAvatarInput.value    = '';
+      state.stagedAvatar        = null;
     }
 
     function saveAndApplyProfile() {
       const current = getProfile(defaultProfile);
-      const name = modalNameInput.value.trim() || current.name || defaultProfile.name || 'Student';
-      const avatar = state.stagedAvatar !== null ? state.stagedAvatar : current.avatar;
+      const name    = modalNameInput.value.trim() || current.name || defaultProfile.name || 'Student';
+      const avatar  = state.stagedAvatar !== null ? state.stagedAvatar : current.avatar;
 
-      saveProfile({
-        name,
-        role: current.role,
-        avatar
-      });
-
+      saveProfile({ name, role: current.role, avatar });
       profileStatus.textContent = t('profile.saved');
       const profile = applyProfile(true);
       window.dispatchEvent(new CustomEvent('unilearn:profile-updated', { detail: profile }));
       setTimeout(closeProfileModal, 180);
     }
 
-    function setLanguage(nextLanguage) {
-      state.language = nextLanguage;
-      localStorage.setItem(STORAGE_KEYS.language, nextLanguage);
-      applyStaticTranslations();
-      window.dispatchEvent(new CustomEvent('unilearn:language-changed', {
-        detail: { language: nextLanguage }
-      }));
-    }
+    // ── Sidebar normalisation ────────────────────────────────────
+    // Pass state + setLanguage so normalizeSidebarStructure can build the lang toggle
+    const sidebarRefs = normalizeSidebarStructure(sidebar, state, t, setLanguage);
+    const userChip    = sidebarRefs.userChip || document.getElementById('userChip');
 
-    const sidebarRefs = normalizeSidebarStructure();
-    const userChip = sidebarRefs.userChip || document.getElementById('userChip');
-
-    if (userChip) {
-      userChip.setAttribute('tabindex', '0');
-      userChip.setAttribute('role', 'button');
-      userChip.addEventListener('click', openProfileModal);
-      userChip.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          openProfileModal();
-        }
-      });
-    }
-
-    if (languageToggle) {
-      languageToggle.addEventListener('click', () => {
-        setLanguage(state.language === 'en' ? 'ar' : 'en');
-      });
-    }
-
-    if (mobileMenuBtn && sidebar) {
-      mobileMenuBtn.addEventListener('click', toggleSidebar);
-      mobileMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    if (sidebar && closeSidebarOnLinkClick) {
-      sidebar.querySelectorAll('a').forEach((link) => {
-        link.addEventListener('click', () => {
-          if (window.innerWidth <= 768) closeSidebar();
-        });
-      });
-    }
-
+    // ── Mobile sidebar ───────────────────────────────────────────
     function closeSidebar() {
       if (!sidebar) return;
       sidebar.classList.remove('mobile-open');
@@ -773,12 +698,45 @@
 
     function toggleSidebar() {
       if (!sidebar) return;
-      if (sidebar.classList.contains('mobile-open')) closeSidebar();
-      else openSidebar();
+      sidebar.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+    }
+
+    // ── User chip click → open profile modal ─────────────────────
+    if (userChip) {
+      userChip.setAttribute('tabindex', '0');
+      userChip.setAttribute('role', 'button');
+      userChip.addEventListener('click', openProfileModal);
+      userChip.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProfileModal(); }
+      });
+    }
+
+    // ── Topbar lang toggle (non-sidebar pages) ───────────────────
+    const topbarLangToggle = document.getElementById('languageToggle');
+    if (topbarLangToggle) {
+      topbarLangToggle.addEventListener('click', () => {
+        setLanguage(state.language === 'en' ? 'ar' : 'en');
+      });
+    }
+
+    // ── Hamburger menu ───────────────────────────────────────────
+    if (mobileMenuBtn && sidebar) {
+      mobileMenuBtn.addEventListener('click', toggleSidebar);
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    // Close sidebar when nav links are clicked (non-live-room pages)
+    if (sidebar && closeSidebarOnLinkClick) {
+      sidebar.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 768) closeSidebar();
+        });
+      });
     }
 
     mobileBackdrop.addEventListener('click', closeSidebar);
 
+    // ── Profile modal listeners ──────────────────────────────────
     modalCloseBtn.addEventListener('click', closeProfileModal);
     modalCancelBtn.addEventListener('click', closeProfileModal);
     modalSaveBtn.addEventListener('click', saveAndApplyProfile);
@@ -786,18 +744,12 @@
       localStorage.clear();
       window.location.href = logoutPath;
     });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeProfileModal(); });
 
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) closeProfileModal();
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && sidebar?.classList.contains('mobile-open')) {
-        closeSidebar();
-      }
-
-      if (event.key === 'Escape' && modal.classList.contains('open')) {
-        closeProfileModal();
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (sidebar?.classList.contains('mobile-open')) closeSidebar();
+        if (modal.classList.contains('open'))           closeProfileModal();
       }
     });
 
@@ -805,6 +757,7 @@
       if (window.innerWidth > 768) closeSidebar();
     });
 
+    // ── Avatar reset ─────────────────────────────────────────────
     modalAvatarReset.addEventListener('click', () => {
       state.stagedAvatar = '';
       const profile = getProfile(defaultProfile);
@@ -812,46 +765,36 @@
       profileStatus.textContent = t('profile.avatarReset');
     });
 
+    // ── Avatar file input (local preview only) ───────────────────
     modalAvatarInput.addEventListener('change', () => {
       const [file] = modalAvatarInput.files || [];
       if (!file) return;
-
       if (!file.type.startsWith('image/')) {
         profileStatus.textContent = t('profile.avatarInvalid');
         return;
       }
-
-      const reader = new FileReader();
-      reader.onload = () => {
+      const reader   = new FileReader();
+      reader.onload  = () => {
         state.stagedAvatar = reader.result;
-        const profile = getProfile(defaultProfile);
-        setAvatarContent(modalAvatarPreview, {
-          ...profile,
-          avatar: state.stagedAvatar
-        });
+        const profile      = getProfile(defaultProfile);
+        setAvatarContent(modalAvatarPreview, { ...profile, avatar: state.stagedAvatar });
         profileStatus.textContent = t('profile.avatarReady');
       };
       reader.readAsDataURL(file);
     });
 
+    // ── Initial render ───────────────────────────────────────────
     applyStaticTranslations();
     applyProfile(true);
 
+    // ── Public API ───────────────────────────────────────────────
     return {
       t,
-      get language() {
-        return state.language;
-      },
+      get language() { return state.language; },
       setLanguage,
-      toggleLanguage() {
-        setLanguage(state.language === 'en' ? 'ar' : 'en');
-      },
-      getProfile() {
-        return getProfile(defaultProfile);
-      },
-      applyProfile() {
-        return applyProfile(false);
-      },
+      toggleLanguage() { setLanguage(state.language === 'en' ? 'ar' : 'en'); },
+      getProfile()   { return getProfile(defaultProfile); },
+      applyProfile() { return applyProfile(false); },
       closeSidebar,
       toggleSidebar,
       openProfileModal,
@@ -859,6 +802,9 @@
     };
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // PUBLIC SURFACE
+  // ─────────────────────────────────────────────────────────────
   window.UniLearnShell = {
     init,
     getProfile,
@@ -867,28 +813,31 @@
     setAvatarContent
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // GLOBAL AVATAR UPLOAD (Cloudinary via server)
+  // Runs on all pages; the file-input id is unique to the modal.
+  // ─────────────────────────────────────────────────────────────
   document.addEventListener('change', async (event) => {
     if (!event.target || event.target.id !== 'profileAvatarInput') return;
 
     const file = event.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
+    const formData    = new FormData();
     formData.append('profileImage', file);
 
     const currentToken = localStorage.getItem('token');
-    const user = readStoredUser();
-    if (user._id) {
-      formData.append('userId', user._id);
-    }
+    const user         = (() => {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || '{}'); } catch { return {}; }
+    })();
+
+    if (user._id) formData.append('userId', user._id);
 
     try {
       const response = await fetch('/api/auth/update-avatar', {
-        method: 'POST',
-        headers: {
-          Authorization: currentToken ? `Bearer ${currentToken}` : ''
-        },
-        body: formData
+        method:  'POST',
+        headers: { Authorization: currentToken ? `Bearer ${currentToken}` : '' },
+        body:    formData
       });
 
       const data = await response.json();
@@ -898,15 +847,15 @@
           avatar.style.backgroundImage = `url('${data.newImageUrl}')`;
           avatar.classList.add('is-image');
         });
-
         saveProfile({ avatar: data.newImageUrl });
         alert('Avatar updated successfully.');
       } else {
         alert('Upload problem: ' + data.message);
       }
     } catch (error) {
-      console.error('Avatar upload failed:', error);
+      console.error('[Shell] Avatar upload failed:', error.message);
       alert('A server connection error occurred.');
     }
   });
+
 })();
