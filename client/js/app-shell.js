@@ -22,7 +22,7 @@
   const IS_LIVE_ROOM = window.location.pathname.includes('/live');
 
   // ─────────────────────────────────────────────────────────────
-  // SHARED STYLES (injected once, only on non-live-room pages)
+  // SHARED STYLES (injected once)
   // ─────────────────────────────────────────────────────────────
   function ensureSharedStyles() {
     if (document.getElementById(SHARED_STYLE_ID)) return;
@@ -213,6 +213,43 @@
         .profile-modal-footer { padding-left: 18px; padding-right: 18px; }
         .profile-identity { grid-template-columns: 1fr; }
         .profile-modal-footer { flex-direction: column; align-items: stretch; }
+
+        /* ── Mobile sidebar: fixed top + scrollable middle + pinned footer ── */
+
+        /* Force the sidebar to be a strict flex column capped to the
+           real viewport height (dvh accounts for the mobile browser URL bar). */
+        .sidenav,
+        .sidenav.mobile-open {
+          display: flex !important;
+          flex-direction: column !important;
+          height: 100dvh !important;
+          max-height: 100vh !important;   /* safe fallback for older browsers */
+          overflow: hidden !important;    /* the sidenav itself must never scroll */
+        }
+
+        /* The nav-links region is the ONLY part that scrolls.
+           flex: 1 1 auto lets it grow into available space and shrink when
+           the footer needs room, while overflow-y:auto enables its own scroll. */
+        .sidenav .nav-links,
+        .sidenav.mobile-open .nav-links {
+          flex: 1 1 auto !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          padding-bottom: 20px;           /* breathing room above the footer */
+        }
+
+        /* The footer is permanently pinned to the bottom of the sidebar.
+           flex-shrink:0 prevents it from being squashed; margin-top:auto
+           pushes it to the bottom if nav-links is short; background:inherit
+           ensures it doesn't become transparent; z-index keeps it above
+           any content that scrolls underneath it. */
+        .sidenav .nav-footer,
+        .sidenav.mobile-open .nav-footer {
+          flex-shrink: 0 !important;
+          margin-top: auto !important;
+          background: inherit;
+          z-index: 10;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -675,7 +712,6 @@
     }
 
     // ── Sidebar normalisation ────────────────────────────────────
-    // Pass state + setLanguage so normalizeSidebarStructure can build the lang toggle
     const sidebarRefs = normalizeSidebarStructure(sidebar, state, t, setLanguage);
     const userChip    = sidebarRefs.userChip || document.getElementById('userChip');
 
