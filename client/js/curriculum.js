@@ -230,6 +230,11 @@
       });
       catList.appendChild(row);
     });
+
+    // Reinitialize shell to restore global elements if needed
+    if (window.UniLearnShell) {
+      window.UniLearnShell.init();
+    }
   }
 
   function renderHero(category) {
