@@ -1,3 +1,4 @@
+// client/js/curriculum.js
 (() => {
   const TRANSLATIONS = {
     en: {
@@ -192,9 +193,14 @@
     return null;
   }
 
+  // FIX: Instead of wiping catList.innerHTML (which could affect shell-managed
+  // sibling/parent nodes if references shift), surgically remove only the
+  // dynamically generated category rows, leaving any other injected nodes intact.
   function renderCatList() {
     const catList = document.getElementById('catList');
-    catList.innerHTML = '';
+
+    // Surgical removal: only touch elements this function owns.
+    catList.querySelectorAll('.cat-item, .cat-divider').forEach(el => el.remove());
 
     const allItem = document.createElement('div');
     allItem.className = `cat-item ${activeCatId === 'all' ? 'active' : ''}`;
@@ -230,7 +236,6 @@
       });
       catList.appendChild(row);
     });
-
   }
 
   function renderHero(category) {

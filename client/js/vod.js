@@ -1,3 +1,4 @@
+// client/js/vod.js
 (() => {
   const TRANSLATIONS = {
     en: {
@@ -215,6 +216,8 @@
     logoutPath: '/login'
   });
 
+  // These are dedicated chip-group containers inside .filter-sidebar (NOT .sidenav).
+  // We target them directly and only mutate their own children via a scoped inner wrapper.
   const subjectChips = document.getElementById('subjectChips');
   const instructorChips = document.getElementById('instructorChips');
   const durationRange = document.getElementById('durationRange');
@@ -231,6 +234,18 @@
   const playerTotal = document.getElementById('playerTotal');
   const playerSeek = document.getElementById('playerSeek');
   const speedBtn = document.getElementById('speedBtn');
+
+  // Ensure a dedicated inner wrapper exists inside a chip-group container
+  // so we only ever clear/replace that wrapper — never the container itself.
+  function getOrCreateChipsList(container, wrapperId) {
+    let wrap = container.querySelector(`#${wrapperId}`);
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = wrapperId;
+      container.appendChild(wrap);
+    }
+    return wrap;
+  }
 
   function pick(value) {
     if (typeof value === 'string') return value;
@@ -337,8 +352,15 @@
     }
   }
 
+  // FIX: Use dedicated inner wrappers (#subjectChipsList, #instructorChipsList)
+  // so only the generated chip buttons are replaced on each render cycle.
+  // The outer #subjectChips / #instructorChips containers (and their label siblings)
+  // are never touched, keeping the filter-sidebar structure stable.
   function renderFilterChips() {
-    subjectChips.innerHTML = SUBJECTS.map((subject) => `
+    const subjectList = getOrCreateChipsList(subjectChips, 'subjectChipsList');
+    const instructorList = getOrCreateChipsList(instructorChips, 'instructorChipsList');
+
+    subjectList.innerHTML = SUBJECTS.map((subject) => `
       <button
         class="filter-chip ${state.filterSubject === subject.id ? 'active' : ''}"
         type="button"
@@ -348,7 +370,7 @@
       </button>
     `).join('');
 
-    instructorChips.innerHTML = INSTRUCTORS.map((instructor) => `
+    instructorList.innerHTML = INSTRUCTORS.map((instructor) => `
       <button
         class="filter-chip ${state.filterInstructor === instructor.id ? 'active' : ''}"
         type="button"
@@ -672,6 +694,8 @@
     document.body.style.overflow = '';
   }
 
+  // FIX: Delegate chip clicks to the container level so newly rendered chips
+  // inside the inner wrapper are always caught without re-attaching listeners.
   subjectChips.addEventListener('click', (event) => {
     const button = event.target.closest('[data-subject]');
     if (!button) return;
@@ -1117,6 +1141,7 @@
       </form>
     `;
 
+    const vodArea = document.getElementById('vodArea');
     vodArea.insertBefore(panel, featuredStrip);
 
     const toggleButton = document.getElementById('vodCmsToggle');
