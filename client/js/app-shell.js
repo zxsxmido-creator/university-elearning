@@ -1,3 +1,4 @@
+// client/js/app-shell.js
 (() => {
   const token = localStorage.getItem('token');
   if (!token && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
@@ -18,12 +19,8 @@
   const SIDEBAR_LANGUAGE_BUTTON_ID    = 'sidebarLangToggle';
   const SIDEBAR_WHATSAPP_ID           = 'sidebarWhatsappSupport';
 
-  // ── Detect Live Room once at module level ──────────────────────
   const IS_LIVE_ROOM = window.location.pathname.includes('/live');
 
-  // ─────────────────────────────────────────────────────────────
-  // SHARED STYLES (injected once)
-  // ─────────────────────────────────────────────────────────────
   function ensureSharedStyles() {
     if (document.getElementById(SHARED_STYLE_ID)) return;
     if (document.querySelector('link[href*="app-shell.css"]')) return;
@@ -214,50 +211,31 @@
         .profile-identity { grid-template-columns: 1fr; }
         .profile-modal-footer { flex-direction: column; align-items: stretch; }
 
-        /* ── Mobile sidebar: fixed top + scrollable middle + pinned footer ── */
-
-        /* Force the sidebar to be a strict flex column capped to the
-           real viewport height (dvh accounts for the mobile browser URL bar). */
+        /* ── NUCLEAR FOOTER FIX ──
+           Rip .nav-footer out of the flex flow and pin it absolutely to the
+           bottom of the sidebar so no amount of .nav-links overflow can push
+           it off-screen on any page (curriculum, vod, or otherwise). */
         .sidenav,
         .sidenav.mobile-open {
-          display: flex !important;
-          flex-direction: column !important;
-          height: 100dvh !important;
-          max-height: 100vh !important;   /* safe fallback for older browsers */
-          overflow: hidden !important;    /* the sidenav itself must never scroll */
+          padding-bottom: 85px !important;
         }
 
-        /* The nav-links region is the ONLY part that scrolls.
-           flex: 1 1 auto lets it grow into available space and shrink when
-           the footer needs room, while overflow-y:auto enables its own scroll. */
-        .sidenav .nav-links,
-        .sidenav.mobile-open .nav-links {
-          flex: 1 1 auto !important;
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-          padding-bottom: 20px;           /* breathing room above the footer */
-        }
-
-        /* The footer is permanently pinned to the bottom of the sidebar.
-           flex-shrink:0 prevents it from being squashed; margin-top:auto
-           pushes it to the bottom if nav-links is short; background:inherit
-           ensures it doesn't become transparent; z-index keeps it above
-           any content that scrolls underneath it. */
         .sidenav .nav-footer,
         .sidenav.mobile-open .nav-footer {
-          flex-shrink: 0 !important;
-          margin-top: auto !important;
-          background: inherit;
-          z-index: 10;
+          position: absolute !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          display: flex !important;
+          visibility: visible !important;
+          z-index: 99999 !important;
+          background: #18130e !important;
         }
       }
     `;
     document.head.appendChild(style);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // UTILITIES
-  // ─────────────────────────────────────────────────────────────
   function resolveKey(source, key) {
     return key.split('.').reduce((value, segment) => {
       if (!value || typeof value !== 'object') return undefined;
@@ -286,9 +264,6 @@
       .replace(/'/g, '&#39;');
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // LOCAL STORAGE HELPERS
-  // ─────────────────────────────────────────────────────────────
   function readStoredUser() {
     try {
       const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.user) || '{}');
@@ -350,9 +325,6 @@
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // PROFILE MODAL
-  // ─────────────────────────────────────────────────────────────
   function ensureProfileModal() {
     if (document.getElementById(MODAL_ID)) return;
 
@@ -411,13 +383,8 @@
     document.body.appendChild(wrapper);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // SIDEBAR FOOTER HELPER
-  // ─────────────────────────────────────────────────────────────
   function ensureSidebarFooter(sidebar) {
-    // ── LIVE ROOM GUARD: do not inject footer into live room DOM ──
     if (IS_LIVE_ROOM) return null;
-
     if (!sidebar) return null;
 
     let footer = sidebar.querySelector('.nav-footer');
@@ -445,11 +412,7 @@
     return userChip;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // SIDEBAR STRUCTURE NORMALISER
-  // ─────────────────────────────────────────────────────────────
   function normalizeSidebarStructure(sidebar, state, t, setLanguage) {
-    // ── LIVE ROOM GUARD: skip all nav injection on the live room page ──
     if (IS_LIVE_ROOM) {
       return { userChip: null };
     }
@@ -461,7 +424,6 @@
 
     if (!navLinks) return { userChip };
 
-    // ── Language toggle ────────────────────────────────────────
     let langWrapper = document.getElementById(SIDEBAR_LANGUAGE_WRAPPER_ID);
     if (!langWrapper) {
       langWrapper    = document.createElement('div');
@@ -485,7 +447,6 @@
       setLanguage(state.language === 'en' ? 'ar' : 'en');
     });
 
-    // ── WhatsApp link ──────────────────────────────────────────
     let whatsappLink = document.getElementById(SIDEBAR_WHATSAPP_ID);
     if (!whatsappLink) {
       whatsappLink    = document.createElement('a');
@@ -503,7 +464,6 @@
       <span>WhatsApp Support</span>
     `;
 
-    // ── Ordered nav link paths ─────────────────────────────────
     const sectionLabel   = navLinks.querySelector('.nav-section-label');
     const orderedPaths   = ['/dashboard', '/curriculum', '/vod', '/live', '/quizzes'];
     const navLinkMap     = new Map();
@@ -530,9 +490,6 @@
     return { userChip };
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // MAIN INIT
-  // ─────────────────────────────────────────────────────────────
   function init({
     translations           = {},
     defaultProfile         = {},
@@ -552,18 +509,18 @@
       stagedAvatar: null
     };
 
-    const modal             = document.getElementById(MODAL_ID);
-    const modalCloseBtn     = document.getElementById('profileCloseBtn');
-    const modalCancelBtn    = document.getElementById('profileCancelBtn');
-    const modalSaveBtn      = document.getElementById('profileSaveBtn');
-    const modalLogoutBtn    = document.getElementById('profileLogoutBtn');
-    const modalNameInput    = document.getElementById('profileDisplayName');
-    const modalAvatarInput  = document.getElementById('profileAvatarInput');
-    const modalAvatarReset  = document.getElementById('profileAvatarReset');
+    const modal              = document.getElementById(MODAL_ID);
+    const modalCloseBtn      = document.getElementById('profileCloseBtn');
+    const modalCancelBtn     = document.getElementById('profileCancelBtn');
+    const modalSaveBtn       = document.getElementById('profileSaveBtn');
+    const modalLogoutBtn     = document.getElementById('profileLogoutBtn');
+    const modalNameInput     = document.getElementById('profileDisplayName');
+    const modalAvatarInput   = document.getElementById('profileAvatarInput');
+    const modalAvatarReset   = document.getElementById('profileAvatarReset');
     const modalAvatarPreview = document.getElementById('profileAvatarPreview');
-    const profileStatus     = document.getElementById('profileStatus');
-    const sidebar           = document.querySelector(sidebarSelector);
-    const mobileMenuBtn     = document.getElementById('mobileMenuBtn');
+    const profileStatus      = document.getElementById('profileStatus');
+    const sidebar            = document.querySelector(sidebarSelector);
+    const mobileMenuBtn      = document.getElementById('mobileMenuBtn');
 
     let mobileBackdrop = document.getElementById('mobileNavBackdrop');
     if (!mobileBackdrop) {
@@ -575,7 +532,6 @@
       document.body.appendChild(mobileBackdrop);
     }
 
-    // ── Translation helpers ──────────────────────────────────────
     function t(key, params = {}) {
       const langTable     = translations[state.language] || translations.en || {};
       const fallbackTable = translations.en || {};
@@ -587,7 +543,6 @@
       return t(`roles.${role}`) === `roles.${role}` ? capitalize(role) : t(`roles.${role}`);
     }
 
-    // ── Language toggle sync ─────────────────────────────────────
     function syncSidebarLangToggle() {
       if (IS_LIVE_ROOM) return;
       const button = document.getElementById(SIDEBAR_LANGUAGE_BUTTON_ID);
@@ -609,7 +564,6 @@
       });
     }
 
-    // ── Profile sync ─────────────────────────────────────────────
     function applyProfile(triggerCallback = false) {
       const profile = getProfile(defaultProfile);
 
@@ -630,7 +584,6 @@
       return profile;
     }
 
-    // ── Static translations ──────────────────────────────────────
     function applyStaticTranslations() {
       document.documentElement.lang = state.language;
       document.documentElement.dir  = state.language === 'ar' ? 'rtl' : 'ltr';
@@ -666,7 +619,6 @@
       }
     }
 
-    // ── Set language ─────────────────────────────────────────────
     function setLanguage(nextLanguage) {
       state.language = nextLanguage;
       localStorage.setItem(STORAGE_KEYS.language, nextLanguage);
@@ -677,7 +629,6 @@
       }));
     }
 
-    // ── Profile modal ────────────────────────────────────────────
     function openProfileModal() {
       state.stagedAvatar = getProfile(defaultProfile).avatar || null;
       modalNameInput.value = getProfile(defaultProfile).name;
@@ -711,11 +662,9 @@
       setTimeout(closeProfileModal, 180);
     }
 
-    // ── Sidebar normalisation ────────────────────────────────────
     const sidebarRefs = normalizeSidebarStructure(sidebar, state, t, setLanguage);
     const userChip    = sidebarRefs.userChip || document.getElementById('userChip');
 
-    // ── Mobile sidebar ───────────────────────────────────────────
     function closeSidebar() {
       if (!sidebar) return;
       sidebar.classList.remove('mobile-open');
@@ -737,7 +686,6 @@
       sidebar.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
     }
 
-    // ── User chip click → open profile modal ─────────────────────
     if (userChip) {
       userChip.setAttribute('tabindex', '0');
       userChip.setAttribute('role', 'button');
@@ -747,7 +695,6 @@
       });
     }
 
-    // ── Topbar lang toggle (non-sidebar pages) ───────────────────
     const topbarLangToggle = document.getElementById('languageToggle');
     if (topbarLangToggle) {
       topbarLangToggle.addEventListener('click', () => {
@@ -755,13 +702,11 @@
       });
     }
 
-    // ── Hamburger menu ───────────────────────────────────────────
     if (mobileMenuBtn && sidebar) {
       mobileMenuBtn.addEventListener('click', toggleSidebar);
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
     }
 
-    // Close sidebar when nav links are clicked (non-live-room pages)
     if (sidebar && closeSidebarOnLinkClick) {
       sidebar.querySelectorAll('a').forEach((link) => {
         link.addEventListener('click', () => {
@@ -772,7 +717,6 @@
 
     mobileBackdrop.addEventListener('click', closeSidebar);
 
-    // ── Profile modal listeners ──────────────────────────────────
     modalCloseBtn.addEventListener('click', closeProfileModal);
     modalCancelBtn.addEventListener('click', closeProfileModal);
     modalSaveBtn.addEventListener('click', saveAndApplyProfile);
@@ -793,7 +737,6 @@
       if (window.innerWidth > 768) closeSidebar();
     });
 
-    // ── Avatar reset ─────────────────────────────────────────────
     modalAvatarReset.addEventListener('click', () => {
       state.stagedAvatar = '';
       const profile = getProfile(defaultProfile);
@@ -801,7 +744,6 @@
       profileStatus.textContent = t('profile.avatarReset');
     });
 
-    // ── Avatar file input (local preview only) ───────────────────
     modalAvatarInput.addEventListener('change', () => {
       const [file] = modalAvatarInput.files || [];
       if (!file) return;
@@ -819,11 +761,9 @@
       reader.readAsDataURL(file);
     });
 
-    // ── Initial render ───────────────────────────────────────────
     applyStaticTranslations();
     applyProfile(true);
 
-    // ── Public API ───────────────────────────────────────────────
     return {
       t,
       get language() { return state.language; },
@@ -838,9 +778,6 @@
     };
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // PUBLIC SURFACE
-  // ─────────────────────────────────────────────────────────────
   window.UniLearnShell = {
     init,
     getProfile,
@@ -849,10 +786,6 @@
     setAvatarContent
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // GLOBAL AVATAR UPLOAD (Cloudinary via server)
-  // Runs on all pages; the file-input id is unique to the modal.
-  // ─────────────────────────────────────────────────────────────
   document.addEventListener('change', async (event) => {
     if (!event.target || event.target.id !== 'profileAvatarInput') return;
 
