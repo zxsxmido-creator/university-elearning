@@ -63,15 +63,19 @@ a {
   inset: 0 auto 0 0;
   z-index: 50;
   width: var(--nav-width);
+  height: 100%;
+  height: 100dvh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--ink);
+  overflow: hidden;
 }
 
 .nav-brand {
   padding: 26px 22px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 }
 
 .brand-name {
@@ -91,11 +95,14 @@ a {
 }
 
 .nav-links {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 16px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .nav-section-label {
@@ -154,6 +161,9 @@ a {
 .nav-footer {
   padding: 14px 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: auto;
+  flex-shrink: 0;
+  background: var(--ink);
 }
 
 .user-chip {
@@ -1161,9 +1171,15 @@ html[dir='rtl'] .status-badge {
 
   .sidenav {
     width: min(88vw, 320px);
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     transform: translateX(-105%);
     transition: transform 0.24s ease;
     box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .sidenav.mobile-open {
@@ -1185,6 +1201,18 @@ html[dir='rtl'] .status-badge {
 
   .mobile-menu-btn {
     display: inline-flex;
+  }
+
+  .nav-links {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .nav-footer {
+    margin-top: auto;
+    flex-shrink: 0;
   }
 
   .topbar {
