@@ -124,3 +124,4 @@ socketHandlers(io);
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => console.log(`Server is LIVE on port ${PORT} 🚀`));
+module.exports = app;
