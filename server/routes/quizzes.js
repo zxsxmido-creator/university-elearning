@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const Quiz = require('../models/Quiz');
@@ -102,6 +103,34 @@ router.post('/', auth, admin, async (req, res) => {
     return res.status(201).json({ quiz: normalizeQuiz(quiz) });
   } catch (error) {
     return res.status(500).json({ msg: 'Failed to create quiz' });
+  }
+});
+
+router.patch('/:id/duration', auth, admin, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ msg: 'Invalid quiz id' });
+    }
+
+    const duration = Number(req.body.duration);
+
+    if (!Number.isFinite(duration) || duration < 1) {
+      return res.status(400).json({ msg: 'Duration must be a positive number' });
+    }
+
+    const quiz = await Quiz.findByIdAndUpdate(
+      req.params.id,
+      { $set: { duration } },
+      { new: true, runValidators: true }
+    );
+
+    if (!quiz) {
+      return res.status(404).json({ msg: 'Quiz not found' });
+    }
+
+    return res.json({ quiz: normalizeQuiz(quiz) });
+  } catch (error) {
+    return res.status(500).json({ msg: 'Failed to update quiz duration' });
   }
 });
 
