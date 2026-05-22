@@ -1,0 +1,35 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": null,
+  "outputDirectory": "client",
+  "rewrites": [
+    {
+      "source": "/dashboard",
+      "destination": "/pages/dashboard.html"
+    },
+    {
+      "source": "/curriculum",
+      "destination": "/pages/curriculum.html"
+    },
+    {
+      "source": "/vod",
+      "destination": "/pages/vod.html"
+    },
+    {
+      "source": "/live",
+      "destination": "/pages/live-room.html"
+    },
+    {
+      "source": "/quizzes",
+      "destination": "/pages/quizzes.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/pages/login.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/pages/register.html"
+    }
+  ]
+}
