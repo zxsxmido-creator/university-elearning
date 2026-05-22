@@ -100,6 +100,7 @@
         pointsSuffix: '{{value}} pts',
         correctAnswers: '{{count}} / {{total}} correct',
         answerLabel: 'Your answer: {{answer}}',
+        correctAnswerLabel: 'Correct answer: {{answer}}',
         unanswered: 'No answer selected'
       }
     },
@@ -201,6 +202,7 @@
         pointsSuffix: '{{value}} نقطة',
         correctAnswers: '{{count}} / {{total}} صحيح',
         answerLabel: 'إجابتك: {{answer}}',
+        correctAnswerLabel: 'الإجابة الصحيحة: {{answer}}',
         unanswered: 'لم يتم اختيار إجابة'
       }
     }
@@ -545,6 +547,7 @@
       const selectedText = Number.isInteger(selectedAnswer)
         ? pick(question.options[selectedAnswer])
         : shell.t('quizzes.unanswered');
+      const correctText = pick(question.options[question.answer]);
 
       return `
         <div class="quiz-summary-item">
@@ -553,6 +556,9 @@
             <div class="quiz-summary-item-answer">${shell.t('quizzes.answerLabel', {
               answer: window.UniLearnShell.escapeHtml(selectedText)
             })}</div>
+            ${!isCorrect ? `<div class="quiz-summary-item-correct-answer">${shell.t('quizzes.correctAnswerLabel', {
+              answer: window.UniLearnShell.escapeHtml(correctText)
+            })}</div>` : ''}
           </div>
           <span class="quiz-summary-item-status ${isCorrect ? 'correct' : 'incorrect'}">
             ${isCorrect ? shell.t('quizzes.correct') : shell.t('quizzes.incorrect')}

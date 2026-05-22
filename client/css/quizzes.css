@@ -317,8 +317,8 @@
 
 .quiz-modal {
   width: min(100%, 720px);
-  max-height: 90vh; /* تحديد أقصى طول للنافذة */
-  display: flex; /* تحويلها لـ Flexbox عشان نفصل الهيدر والفوتر */
+  max-height: 90vh;
+  display: flex;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -334,7 +334,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 22px 24px;
-  flex-shrink: 0; /* منع الهيدر والفوتر من الانكماش */
+  flex-shrink: 0;
 }
 
 .quiz-modal-header {
@@ -387,10 +387,9 @@
   padding: 24px;
   display: grid;
   gap: 18px;
-  overflow-y: auto; /* تفعيل السكرول هنا فقط */
+  overflow-y: auto;
 }
 
-/* --- تصميم السكرول بار الاحترافي --- */
 .quiz-modal-body::-webkit-scrollbar {
   width: 6px;
 }
@@ -537,6 +536,13 @@
   font-size: 12px;
 }
 
+.quiz-summary-item-correct-answer {
+  margin-top: 6px;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .quiz-summary-item-status {
   padding: 5px 10px;
   border-radius: 999px;
@@ -544,6 +550,7 @@
   font-size: 10px;
   letter-spacing: 0.06em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .quiz-summary-item-status.correct {
@@ -636,7 +643,7 @@
 }
 
 /* --- RTL Fixes (Arabic Support) --- */
-html[dir="rtl"] .quiz-card, 
+html[dir="rtl"] .quiz-card,
 html[dir="rtl"] .leaderboard {
   text-align: right;
 }
