@@ -641,9 +641,44 @@
     renderQuizQuestion(quiz);
   }
 
-  function submitQuiz() {
+  async function saveQuizAttempt(quiz, result) {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      return result;
+    }
+
+    try {
+      const response = await fetch(`/api/quizzes/${quiz.id}/attempts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ answers: result.answers })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.msg || 'Failed to save quiz attempt');
+      }
+
+      return {
+        ...result,
+        ...(data.result || {})
+      };
+    } catch (error) {
+      console.error('Quiz attempt save failed:', error);
+      return result;
+    }
+  }
+
+  async function submitQuiz() {
     const quiz = currentQuiz();
     if (!quiz) return;
+
+    quizSubmitBtn.disabled = true;
 
     const correctCount = quiz.questions.reduce((total, question, index) => {
       return total + (state.modal.answers[index] === question.answer ? 1 : 0);
@@ -656,13 +691,15 @@
       answers: [...state.modal.answers]
     };
 
+    const savedResult = await saveQuizAttempt(quiz, result);
     const progress = loadProgress();
-    progress[quiz.id] = result;
+    progress[quiz.id] = savedResult;
     saveProgress(progress);
 
-    state.modal.result = result;
+    state.modal.result = savedResult;
     state.modal.reviewOnly = true;
     state.activeTab = 'completed';
+    quizSubmitBtn.disabled = false;
 
     renderAll();
     renderQuizModal();
