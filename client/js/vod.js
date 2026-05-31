@@ -454,7 +454,7 @@
         ? `<span class="status-badge new">${shell.t('vod.newBadge')}</span>`
         : '';
     const deleteButton = isAdminUser()
-      ? `<button type="button" data-lecture-id="${escape(lecture.id)}" data-lecture-name="${escape(pick(lecture.title))}" onclick="event.stopPropagation(); deleteLecture(this.dataset.lectureId, this.dataset.lectureName)" onkeydown="event.stopPropagation()" style="position:absolute; top:8px; right:8px; background:#d4280a; color:white; border:none; border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer; z-index:10">Delete</button>`
+      ? `<button type="button" data-delete-lecture-id="${escape(lecture.id)}" data-lecture-name="${escape(pick(lecture.title))}" style="position:absolute; top:8px; right:8px; background:#d4280a; color:white; border:none; border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer; z-index:10">Delete</button>`
       : '';
 
     return `
@@ -760,6 +760,7 @@
   });
 
   function activateLectureCard(target) {
+    if (target.closest('[data-delete-lecture-id]')) return;
     const card = target.closest('[data-lecture-id]');
     if (!card) return;
     openPlayer(card.dataset.lectureId);
@@ -773,9 +774,20 @@
     }
   });
 
-  vodSections.addEventListener('click', (event) => activateLectureCard(event.target));
+  vodSections.addEventListener('click', (event) => {
+    const deleteButton = event.target.closest('[data-delete-lecture-id]');
+    if (deleteButton) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      deleteLecture(deleteButton.dataset.deleteLectureId, deleteButton.dataset.lectureName);
+      return;
+    }
+
+    activateLectureCard(event.target);
+  });
   vodSections.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
+      if (event.target.closest('[data-delete-lecture-id]')) return;
       event.preventDefault();
       activateLectureCard(event.target);
     }

@@ -1300,3 +1300,29 @@ html[dir='rtl'] .status-badge {
     justify-content: flex-end;
   }
 }
+
+.player-box {
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.player-screen {
+  height: clamp(260px, 52dvh, 430px);
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.player-controls {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .player-box {
+    max-height: calc(100dvh - 28px);
+  }
+
+  .player-screen {
+    height: clamp(220px, 46dvh, 340px);
+  }
+}
