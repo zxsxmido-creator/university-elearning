@@ -453,6 +453,9 @@
       : lecture.isNew
         ? `<span class="status-badge new">${shell.t('vod.newBadge')}</span>`
         : '';
+    const deleteButton = isAdminUser()
+      ? `<button type="button" data-lecture-id="${escape(lecture.id)}" data-lecture-name="${escape(pick(lecture.title))}" onclick="event.stopPropagation(); deleteLecture(this.dataset.lectureId, this.dataset.lectureName)" onkeydown="event.stopPropagation()" style="position:absolute; top:8px; right:8px; background:#d4280a; color:white; border:none; border-radius:6px; padding:4px 10px; font-size:11px; cursor:pointer; z-index:10">Delete</button>`
+      : '';
 
     return `
       <article
@@ -461,7 +464,8 @@
         role="button"
         data-lecture-id="${lecture.id}"
       >
-        <div class="vod-thumb-wrap">
+        <div class="vod-thumb-wrap" style="position: relative;">
+          ${deleteButton}
           <div class="vod-thumb">
             <span>${escape(lecture.code)}</span>
           </div>
@@ -1139,6 +1143,14 @@
         </div>
         <div class="cms-admin-status" id="vodCmsStatus"></div>
       </form>
+      <div class="cms-admin-head" style="margin-top:18px;">
+        <div class="cms-admin-copy">
+          <span class="cms-admin-kicker">Lecture Library</span>
+          <h2 class="cms-admin-title">Manage Recorded Lectures</h2>
+          <p class="cms-admin-note">Use the Delete button on a lecture card below to remove an existing lecture.</p>
+        </div>
+      </div>
+      <div class="cms-admin-status" id="vodDeleteStatus"></div>
     `;
 
     const vodArea = document.getElementById('vodArea');
@@ -1200,6 +1212,37 @@
       }
     });
   }
+
+  async function deleteLecture(lectureId, lectureName) {
+    const confirmed = window.confirm(`Are you sure you want to delete "${lectureName}"? This cannot be undone.`);
+
+    if (!confirmed) return;
+
+    const token = localStorage.getItem('token');
+    const status = document.getElementById('vodDeleteStatus') || document.getElementById('vodCmsStatus');
+
+    try {
+      const response = await fetch(`/api/lectures/library/${lectureId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.msg || 'Lecture delete failed');
+      }
+
+      if (status) status.textContent = data.msg || 'Lecture deleted successfully.';
+      await loadLecturesCms();
+    } catch (error) {
+      alert(error.message || 'Lecture delete failed.');
+    }
+  }
+
+  window.deleteLecture = deleteLecture;
 
   async function loadLecturesCms() {
     try {

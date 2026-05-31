@@ -129,4 +129,24 @@ router.post('/library', auth, admin, (req, res, next) => {
   }
 });
 
+router.delete('/library/:id', auth, admin, async (req, res) => {
+  try {
+    const lecture = await RecordedLecture.findById(req.params.id);
+
+    if (!lecture) {
+      return res.status(404).json({ msg: 'Lecture not found' });
+    }
+
+    if (lecture.videoPublicId) {
+      await cloudinary.uploader.destroy(lecture.videoPublicId, { resource_type: 'video' });
+    }
+
+    await lecture.deleteOne();
+
+    return res.json({ msg: 'Lecture deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ msg: 'Failed to delete lecture' });
+  }
+});
+
 module.exports = router;
