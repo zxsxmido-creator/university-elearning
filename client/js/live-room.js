@@ -176,6 +176,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   const userRole           = localStorage.getItem('userRole') || 'student';
   const localParticipantId = 'local-self';
   const isInstructor       = userRole === 'instructor' || userRole === 'admin';
+  const isAdmin            = userRole === 'admin';
 
   // ─────────────────────────────────────────────────────────────
   // STATE
@@ -200,6 +201,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     timerSeconds:      0,
     timerInterval:     null,
     currentQuality:    '720p',
+    cameraFacingMode:  'user',
     remoteVideoActive: false
   };
 
@@ -251,6 +253,8 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     singleSpeakerHint: document.getElementById('singleSpeakerHint'),
     toggleMic:         document.getElementById('toggleMic'),
     toggleCam:         document.getElementById('toggleCam'),
+    switchCamera:      null,
+    switchCameraLabel: null,
     toggleScreen:      document.getElementById('toggleScreen'),
     raiseHand:         document.getElementById('raiseHandBtn'),
     endBtn:            document.getElementById('endBtn'),
@@ -285,6 +289,49 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     });
   }
 
+  function createAdminCameraToggle() {
+    if (!isAdmin || !el.toggleCam || el.switchCamera) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'ctrl-btn';
+    btn.id = 'switchCamera';
+    btn.type = 'button';
+    btn.innerHTML = `
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 12a9 9 0 0 1-15.36 6.36L3 15"></path>
+        <path d="M3 21v-6h6"></path>
+        <path d="M3 12a9 9 0 0 1 15.36-6.36L21 9"></path>
+        <path d="M21 3v6h-6"></path>
+      </svg>
+      <span id="switchCameraLabel">Back Camera</span>`;
+
+    el.toggleCam.insertAdjacentElement('afterend', btn);
+    el.switchCamera = btn;
+    el.switchCameraLabel = btn.querySelector('#switchCameraLabel');
+    el.switchCamera.addEventListener('click', switchCameraFacing);
+    updateSwitchCameraButton();
+  }
+
+  function getCameraToggleLabel() {
+    return state.cameraFacingMode === 'user' ? 'Back Camera' : 'Front Camera';
+  }
+
+  function updateSwitchCameraButton() {
+    if (!el.switchCamera) return;
+    const label = getCameraToggleLabel();
+    el.switchCameraLabel.textContent = label;
+    el.switchCamera.setAttribute('aria-label', label);
+    el.switchCamera.title = label;
+    el.switchCamera.classList.toggle('active', state.cameraFacingMode === 'environment');
+  }
+
+  function cameraTrackConfig(facingMode = state.cameraFacingMode) {
+    return {
+      encoderConfig: VIDEO_QUALITY_CONFIGS[state.currentQuality],
+      facingMode
+    };
+  }
+
   // ─────────────────────────────────────────────────────────────
   // SLOT VISIBILITY HELPERS
   // ─────────────────────────────────────────────────────────────
@@ -305,12 +352,14 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     if (isInstructor) {
       showLocalSlotOnly();
       el.toggleCam.style.display      = 'inline-flex';
+      if (el.switchCamera) el.switchCamera.style.display = isAdmin ? 'inline-flex' : 'none';
       el.toggleScreen.style.display   = 'inline-flex';
       el.raiseHand.style.display      = 'none';
       el.requestsTabBtn.style.display = 'inline-flex';
       el.micBtnLabel.textContent      = shell.t('liveRoom.mic');
     } else {
       el.toggleCam.style.display      = 'none';
+      if (el.switchCamera) el.switchCamera.style.display = 'none';
       el.toggleScreen.style.display   = 'none';
       el.raiseHand.style.display      = 'inline-flex';
       el.requestsTabBtn.style.display = 'none';
@@ -318,6 +367,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         ? shell.t('liveRoom.requestSent').split('.')[0]
         : shell.t('liveRoom.requestToSpeak');
     }
+    updateSwitchCameraButton();
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -590,6 +640,66 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // ─────────────────────────────────────────────────────────────
   // VIDEO QUALITY
   // ─────────────────────────────────────────────────────────────
+  async function switchCameraFacing() {
+    if (!isAdmin || !isInstructor || !state.agoraClient || typeof AgoraRTC === 'undefined') return;
+
+    const previousFacingMode = state.cameraFacingMode;
+    const nextFacingMode = previousFacingMode === 'user' ? 'environment' : 'user';
+    const wasCamOn = state.camOn;
+    const wasScreenSharing = state.screenSharing;
+    const previousTrack = state.localVideoTrack;
+
+    if (el.switchCamera) el.switchCamera.disabled = true;
+
+    try {
+      if (!wasScreenSharing && previousTrack) {
+        try { await state.agoraClient.unpublish(previousTrack); } catch (_) {}
+      }
+
+      try { previousTrack?.stop(); } catch (_) {}
+      try { previousTrack?.close(); } catch (_) {}
+      state.localVideoTrack = null;
+
+      const nextTrack = await AgoraRTC.createCameraVideoTrack(cameraTrackConfig(nextFacingMode));
+      await nextTrack.setMuted(!wasCamOn);
+
+      state.localVideoTrack = nextTrack;
+      state.cameraFacingMode = nextFacingMode;
+
+      try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
+
+      if (!wasScreenSharing) {
+        await state.agoraClient.publish([state.localVideoTrack]);
+      }
+
+      updateLocalMediaState();
+      updateSwitchCameraButton();
+    } catch (err) {
+      console.warn('[Camera] Switch failed:', err);
+      state.cameraFacingMode = previousFacingMode;
+
+      if (!state.localVideoTrack) {
+        try {
+          const fallbackTrack = await AgoraRTC.createCameraVideoTrack(cameraTrackConfig(previousFacingMode));
+          await fallbackTrack.setMuted(!wasCamOn);
+          state.localVideoTrack = fallbackTrack;
+          try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
+          if (!wasScreenSharing) {
+            await state.agoraClient.publish([state.localVideoTrack]);
+          }
+        } catch (restoreErr) {
+          console.warn('[Camera] Restore failed:', restoreErr);
+        }
+      }
+
+      updateLocalMediaState();
+      updateSwitchCameraButton();
+      pushNotification('Could not switch camera.', '');
+    } finally {
+      if (el.switchCamera) el.switchCamera.disabled = false;
+    }
+  }
+
   function positionQualityDropdown() {
     const btn = el.qualityBtn.getBoundingClientRect();
     const dd  = el.qualityWrap.querySelector('.quality-dropdown');
@@ -704,9 +814,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       await state.localAudioTrack.setMuted(true);
 
       if (isInstructor) {
-        state.localVideoTrack = await AgoraRTC.createCameraVideoTrack({
-          encoderConfig: VIDEO_QUALITY_CONFIGS[state.currentQuality]
-        });
+        state.localVideoTrack = await AgoraRTC.createCameraVideoTrack(cameraTrackConfig());
         await state.localVideoTrack.setMuted(true);
         try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
 
@@ -1036,6 +1144,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   // INIT
   // ─────────────────────────────────────────────────────────────
   el.localAvatar.textContent = (userName.charAt(0) || 'S').toUpperCase();
+  createAdminCameraToggle();
 
   if (el.qualityLabel) el.qualityLabel.textContent = state.currentQuality;
   document.querySelectorAll('.quality-opt').forEach((btn) => {
