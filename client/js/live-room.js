@@ -668,7 +668,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
       try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
 
-      if (!wasScreenSharing) {
+      if (!wasScreenSharing && wasCamOn) {
         await state.agoraClient.publish([state.localVideoTrack]);
       }
 
@@ -684,7 +684,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
           await fallbackTrack.setMuted(!wasCamOn);
           state.localVideoTrack = fallbackTrack;
           try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
-          if (!wasScreenSharing) {
+          if (!wasScreenSharing && wasCamOn) {
             await state.agoraClient.publish([state.localVideoTrack]);
           }
         } catch (restoreErr) {
@@ -754,24 +754,26 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       }
 
       state.agoraClient.on('user-published', async (remoteUser, mediaType) => {
-        await state.agoraClient.subscribe(remoteUser, mediaType);
+        try {
+          await state.agoraClient.subscribe(remoteUser, mediaType);
 
-        if (mediaType === 'video') {
-          state.remoteVideoActive = true;
-          // FIX: Hide the remote avatar placeholder since video is now active
-          el.remoteAvatar.style.display = 'none'; 
-          
-          remoteUser.videoTrack.play('slot-remote-media');
+          if (mediaType === 'video' && remoteUser.videoTrack) {
+            state.remoteVideoActive = true;
+            if (!isInstructor) showRemoteSlotOnly();
+            el.remoteAvatar.style.display = 'none';
+            remoteUser.videoTrack.play('slot-remote-media');
 
-          if (!isInstructor) {
-            showRemoteSlotOnly();
-            const streamType = state.currentQuality === '360p' ? 1 : 0;
-            try { state.agoraClient.setRemoteVideoStreamType(remoteUser, streamType); } catch (_) {}
+            if (!isInstructor) {
+              const streamType = state.currentQuality === '360p' ? 1 : 0;
+              try { state.agoraClient.setRemoteVideoStreamType(remoteUser, streamType); } catch (_) {}
+            }
           }
-        }
 
-        if (mediaType === 'audio') {
-          remoteUser.audioTrack.play();
+          if (mediaType === 'audio' && remoteUser.audioTrack) {
+            remoteUser.audioTrack.play();
+          }
+        } catch (err) {
+          console.error(`[Agora] Could not subscribe to remote ${mediaType} track:`, err);
         }
       });
 
@@ -819,10 +821,9 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
         try { state.localVideoTrack.play('slot-local-media'); } catch (_) {}
 
         updateLocalMediaState();
-        await state.agoraClient.publish([state.localAudioTrack, state.localVideoTrack]);
+        await state.agoraClient.publish([state.localAudioTrack]);
       } else {
         updateLocalMediaState();
-        await state.agoraClient.publish([state.localAudioTrack]);
       }
 
     } catch (err) {
@@ -847,7 +848,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
     try {
       state.screenTrack = await AgoraRTC.createScreenVideoTrack({}, 'auto');
       const activeTrack = Array.isArray(state.screenTrack) ? state.screenTrack[0] : state.screenTrack;
-      if (state.localVideoTrack) { await state.agoraClient.unpublish(state.localVideoTrack); }
+      if (state.localVideoTrack && state.camOn) { await state.agoraClient.unpublish(state.localVideoTrack); }
       await state.agoraClient.publish(activeTrack);
       activeTrack.on?.('track-ended', stopScreenShare);
       state.screenSharing = true;
@@ -868,7 +869,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       try {
         await state.agoraClient.unpublish(activeTrack);
         activeTrack.close();
-        if (state.localVideoTrack) { await state.agoraClient.publish(state.localVideoTrack); }
+        if (state.localVideoTrack && state.camOn) { await state.agoraClient.publish(state.localVideoTrack); }
       } catch (err) { console.warn('[ScreenShare] Stop failed:', err); }
     }
     state.screenTrack      = null;
@@ -1075,8 +1076,19 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
 
   el.toggleCam.addEventListener('click', async () => {
     if (!isInstructor) return;
-    state.camOn = !state.camOn;
-    if (state.localVideoTrack) await state.localVideoTrack.setMuted(!state.camOn);
+    const nextCamState = !state.camOn;
+    if (state.localVideoTrack && state.agoraClient && !state.screenSharing) {
+      if (nextCamState) {
+        await state.localVideoTrack.setMuted(false);
+        await state.agoraClient.publish(state.localVideoTrack);
+      } else {
+        await state.agoraClient.unpublish(state.localVideoTrack);
+        await state.localVideoTrack.setMuted(true);
+      }
+    } else if (state.localVideoTrack) {
+      await state.localVideoTrack.setMuted(!nextCamState);
+    }
+    state.camOn = nextCamState;
     updateLocalMediaState();
   });
 
