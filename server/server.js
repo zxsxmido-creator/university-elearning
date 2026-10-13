@@ -30,6 +30,7 @@ const authLimiter = rateLimit({
 const allowedOrigins = [
   process.env.CLIENT_URL,
   ...(process.env.CLIENT_URLS || '').split(',').map(origin => origin.trim()),
+  'https://university-elearning-production.up.railway.app',
   'https://university-elearning.vercel.app'
 ].filter(Boolean);
 

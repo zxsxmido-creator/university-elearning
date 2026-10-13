@@ -234,7 +234,11 @@
 
   <div class="notification-stack" id="notifStack"></div>
 
-  <script>window.UNILEARN_API_ORIGIN = 'https://university-elearning-production-61bf.up.railway.app';</script>
+  <script>
+    window.UNILEARN_API_ORIGIN = window.location.hostname.endsWith('.vercel.app')
+      ? 'https://university-elearning-production.up.railway.app'
+      : window.location.origin;
+  </script>
   <script src="../js/app-shell.js"></script>
   <script src="../js/live-room.js"></script>
 </body>
