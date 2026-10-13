@@ -806,7 +806,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
       }
 
       const { token, appId } = await response.json();
-      await state.agoraClient.join(appId, channel, token, null);
+      await state.agoraClient.join(appId, channel, token, 0);
 
       state.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack({
         AEC: true, ANS: true, AGC: true
