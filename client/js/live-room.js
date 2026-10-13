@@ -884,7 +884,7 @@ window.AGORA_APP_ID = "eff8bc824ac7413ea7d0c4ed684809e9";
   function initSocket() {
     if (typeof io !== 'function') return;
 
-    state.socket = io(window.location.origin);
+    state.socket = io(window.UNILEARN_API_ORIGIN || window.location.origin);
 
     state.socket.on('connect', () => {
       state.socketConnected = true;

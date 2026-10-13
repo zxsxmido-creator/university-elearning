@@ -27,11 +27,15 @@ const authLimiter = rateLimit({
   message: { msg: 'محاولات كثيرة جداً، برجاء المحاولة بعد 15 دقيقة.' }
 });
 
-const allowedOrigin = process.env.CLIENT_URL;
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  ...(process.env.CLIENT_URLS || '').split(',').map(origin => origin.trim()),
+  'https://university-elearning.vercel.app'
+].filter(Boolean);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigin,
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -39,7 +43,7 @@ const io = new Server(httpServer, {
 
 connectDB();
 
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 
 // تفعيل حماية الـ CSP لمنع الـ XSS
 // تفعيل حماية الـ CSP لمنع الـ XSS مع السماح لسيرفرات البث
